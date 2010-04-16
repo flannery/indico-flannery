@@ -58,7 +58,11 @@ class AdminClient(ClientBase):
         if cls._instance is None or (adminAPIUrl is not None or username is not None or password is not None):
 
             if adminAPIUrl is None:
+<<<<<<< HEAD
                 adminAPIUrl = getVidyoOptionValue('adminAPIURL')
+=======
+                adminAPIUrl = getVidyoOptionValue('baseAPILocation') + getVidyoOptionValue('adminAPISuffix')
+>>>>>>> [FTR] Vidyo plugin version 1.0
             if username is None:
                 username = getVidyoOptionValue('indicoUsername')
             if password is None:
@@ -86,7 +90,11 @@ class UserClient(ClientBase):
         if cls._instance is None or (userAPIUrl is not None or username is not None or password is not None):
 
             if userAPIUrl is None:
+<<<<<<< HEAD
                 userAPIUrl = getVidyoOptionValue('userAPIURL')
+=======
+                userAPIUrl = getVidyoOptionValue('baseAPILocation') + getVidyoOptionValue('userAPISuffix')
+>>>>>>> [FTR] Vidyo plugin version 1.0
             if username is None:
                 username = getVidyoOptionValue('indicoUsername')
             if password is None:

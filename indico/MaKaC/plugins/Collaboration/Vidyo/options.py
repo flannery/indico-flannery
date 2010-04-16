@@ -67,6 +67,7 @@ globalOptions = [
                          "type": str,
                          "defaultValue": "http://vidyoportal2.cern.ch/services/"}),
 
+<<<<<<< HEAD
     ("adminAPIURL", {"description" : _("Admin API WSDL URL"),
                          "type": str,
                          "defaultValue": "http://vidyoportal2.cern.ch/services/VidyoPortalAdminService?wsdl"}),
@@ -74,6 +75,15 @@ globalOptions = [
     ("userAPIURL", {"description" : _("User API WSDL URL"),
                        "type": str,
                        "defaultValue": "http://vidyoportal2.cern.ch/services/VidyoPortalUserService?wsdl"}),
+=======
+    ("adminAPISuffix", {"description" : _("Admin API suffix"),
+                         "type": str,
+                         "defaultValue": "VidyoPortalAdminService?wsdl"}),
+
+    ("userAPISuffix", {"description" : _("User API suffix"),
+                       "type": str,
+                       "defaultValue": "VidyoPortalUserService?wsdl"}),
+>>>>>>> [FTR] Vidyo plugin version 1.0
 
     ("prefix", {"description": _("Prefix for rooms created by Indico"),
                        "type": str,

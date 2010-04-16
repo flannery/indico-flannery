@@ -123,10 +123,24 @@
                 Html.td({}, booking.url? booking.url : $T("not assigned yet"))));
 
         infoTbody.append(Html.tr({},
+<<<<<<< HEAD
+=======
+                Html.td("collaborationInfoLeftCol", $T('Vidyo room ID:')),
+                Html.td({}, booking.roomId)));
+
+        infoTbody.append(Html.tr({},
+>>>>>>> [FTR] Vidyo plugin version 1.0
             Html.td("collaborationInfoLeftCol", $T('Visibility:')),
             Html.td({}, booking.bookingParams.hidden? $T("Hidden") : $T("Visible"))));
 
         infoTbody.append(Html.tr({},
+<<<<<<< HEAD
+=======
+            Html.td("collaborationInfoLeftCol", $T('Indico booking ID:')),
+            Html.td({}, booking.id)));
+
+        infoTbody.append(Html.tr({},
+>>>>>>> [FTR] Vidyo plugin version 1.0
             Html.td("collaborationInfoLeftCol", $T('Created on:')),
             Html.td({}, formatDateTimeCS(booking.creationDate))));
 
@@ -173,6 +187,7 @@
         vidyoDrawContextHelpIcons();
     },
 
+<<<<<<< HEAD
     beforeCreate: function(pluginName, conferenceId) {
         var allowCreation = true;
         each(bookings, function(booking) {
@@ -193,6 +208,8 @@
         return allowCreation;
     },
 
+=======
+>>>>>>> [FTR] Vidyo plugin version 1.0
     postCreate: function(booking) {
     },
 
