@@ -124,16 +124,20 @@
 
         infoTbody.append(Html.tr({},
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
                 Html.td("collaborationInfoLeftCol", $T('Vidyo room ID:')),
                 Html.td({}, booking.roomId)));
 
         infoTbody.append(Html.tr({},
 >>>>>>> [FTR] Vidyo plugin version 1.0
+=======
+>>>>>>> [REF] Removed internal booking ids from booking details
             Html.td("collaborationInfoLeftCol", $T('Visibility:')),
             Html.td({}, booking.bookingParams.hidden? $T("Hidden") : $T("Visible"))));
 
         infoTbody.append(Html.tr({},
+<<<<<<< HEAD
 <<<<<<< HEAD
 =======
             Html.td("collaborationInfoLeftCol", $T('Indico booking ID:')),
@@ -141,6 +145,8 @@
 
         infoTbody.append(Html.tr({},
 >>>>>>> [FTR] Vidyo plugin version 1.0
+=======
+>>>>>>> [REF] Removed internal booking ids from booking details
             Html.td("collaborationInfoLeftCol", $T('Created on:')),
             Html.td({}, formatDateTimeCS(booking.creationDate))));
 
