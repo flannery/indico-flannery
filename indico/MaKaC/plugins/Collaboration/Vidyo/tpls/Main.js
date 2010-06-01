@@ -194,6 +194,9 @@
     },
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> [FIX] Vidyo: Allow creation of only one booking
     beforeCreate: function(pluginName, conferenceId) {
         var allowCreation = true;
         each(bookings, function(booking) {
@@ -214,8 +217,11 @@
         return allowCreation;
     },
 
+<<<<<<< HEAD
 =======
 >>>>>>> [FTR] Vidyo plugin version 1.0
+=======
+>>>>>>> [FIX] Vidyo: Allow creation of only one booking
     postCreate: function(booking) {
     },
 
