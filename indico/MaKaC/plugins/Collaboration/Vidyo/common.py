@@ -146,6 +146,9 @@ class VidyoTools(object):
     @classmethod
     def getAvatarByAccountName(cls, accountName):
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> [FIX] Vidyo: Auth manager - simplified code
         """
         Retrieves the first avatar found using the authenticators in the
         authenticatorList option (order is respected)
@@ -157,6 +160,7 @@ class VidyoTools(object):
             foundAvatar = foundAvatarDict.get(authName, None)
             if foundAvatar:
                 return foundAvatar
+<<<<<<< HEAD
 =======
         authenticatorsToUse = getVidyoOptionValue("authenticatorList")
 
@@ -169,6 +173,8 @@ class VidyoTools(object):
                         break
             return foundAvatar
 >>>>>>> [FTR] Vidyo plugin version 1.0
+=======
+>>>>>>> [FIX] Vidyo: Auth manager - simplified code
         else:
             return None
 
