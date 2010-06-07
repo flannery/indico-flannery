@@ -68,6 +68,7 @@ globalOptions = [
                          "defaultValue": "http://vidyoportal2.cern.ch/services/"}),
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     ("adminAPIURL", {"description" : _("Admin API WSDL URL"),
                          "type": str,
                          "defaultValue": "http://vidyoportal2.cern.ch/services/VidyoPortalAdminService?wsdl"}),
@@ -77,13 +78,20 @@ globalOptions = [
                        "defaultValue": "http://vidyoportal2.cern.ch/services/VidyoPortalUserService?wsdl"}),
 =======
     ("adminAPISuffix", {"description" : _("Admin API suffix"),
+=======
+    ("adminAPIURL", {"description" : _("Admin API WSDL URL"),
+>>>>>>> [FIX] Vidyo: Changed WSDL suffixes to actual URLs
                          "type": str,
-                         "defaultValue": "VidyoPortalAdminService?wsdl"}),
+                         "defaultValue": "http://vidyoportal2.cern.ch/services/VidyoPortalAdminService?wsdl"}),
 
-    ("userAPISuffix", {"description" : _("User API suffix"),
+    ("userAPIURL", {"description" : _("User API WSDL URL"),
                        "type": str,
+<<<<<<< HEAD
                        "defaultValue": "VidyoPortalUserService?wsdl"}),
 >>>>>>> [FTR] Vidyo plugin version 1.0
+=======
+                       "defaultValue": "http://vidyoportal2.cern.ch/services/VidyoPortalUserService?wsdl"}),
+>>>>>>> [FIX] Vidyo: Changed WSDL suffixes to actual URLs
 
     ("prefix", {"description": _("Prefix for rooms created by Indico"),
                        "type": str,

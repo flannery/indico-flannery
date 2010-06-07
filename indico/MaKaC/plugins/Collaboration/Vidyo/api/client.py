@@ -59,10 +59,14 @@ class AdminClient(ClientBase):
 
             if adminAPIUrl is None:
 <<<<<<< HEAD
+<<<<<<< HEAD
                 adminAPIUrl = getVidyoOptionValue('adminAPIURL')
 =======
                 adminAPIUrl = getVidyoOptionValue('baseAPILocation') + getVidyoOptionValue('adminAPISuffix')
 >>>>>>> [FTR] Vidyo plugin version 1.0
+=======
+                adminAPIUrl = getVidyoOptionValue('adminAPIURL')
+>>>>>>> [FIX] Vidyo: Changed WSDL suffixes to actual URLs
             if username is None:
                 username = getVidyoOptionValue('indicoUsername')
             if password is None:
@@ -91,10 +95,14 @@ class UserClient(ClientBase):
 
             if userAPIUrl is None:
 <<<<<<< HEAD
+<<<<<<< HEAD
                 userAPIUrl = getVidyoOptionValue('userAPIURL')
 =======
                 userAPIUrl = getVidyoOptionValue('baseAPILocation') + getVidyoOptionValue('userAPISuffix')
 >>>>>>> [FTR] Vidyo plugin version 1.0
+=======
+                userAPIUrl = getVidyoOptionValue('userAPIURL')
+>>>>>>> [FIX] Vidyo: Changed WSDL suffixes to actual URLs
             if username is None:
                 username = getVidyoOptionValue('indicoUsername')
             if password is None:
