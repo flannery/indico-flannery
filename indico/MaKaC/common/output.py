@@ -218,11 +218,27 @@ class outputGenerator:
                    out                    = None,
                    recordingManagerTags   = None):
 
-#        Logger.get('RecMan').info("in _confToXML()")
-#        Logger.get('RecMan').info(" conf = %s" % conf)
-#        Logger.get('RecMan').info(" includeSession = %s" % includeSession)
-#        Logger.get('RecMan').info(" includeContribution = %s" % includeContribution)
-#        Logger.get('RecMan').info(" includeSubContribution = %s" % includeSubContribution)
+        Logger.get('RecMan').info("in _confToXML()")
+        Logger.get('RecMan').info(" conf = %s" % conf)
+        Logger.get('RecMan').info(" includeSession = %s" % includeSession)
+        Logger.get('RecMan').info(" includeContribution = %s" % includeContribution)
+        Logger.get('RecMan').info(" includeSubContribution = %s" % includeSubContribution)
+
+#        Logger.get('WebEx').info(" Has WebEx plugin? %s" % str( PluginsHolder().getPluginType("Collaboration").hasPlugin("WebEx")))
+#        Logger.get('WebEx').info(" Is WebEx plugin active? %s" % str( PluginsHolder().getPluginType("Collaboration").getPlugin("WebEx").isActive() ))
+
+        #"""if PluginsHolder().getPluginType("Collaboration").hasPlugin("WebEx") and PluginsHolder().getPluginType("Collaboration").getPlugin("WebEx").isActive():
+        #    Logger.get('RecMan').info("WebEx is active. Printing out list of WebEx bookings")
+        #    csbm = conf.getCSBookingManager()
+        #    bookings = csbm.getBookingList(filterByType = "WebEx", notify = False, onlyPublic = True)
+        #    bookings.sort(key = lambda b: b.getStartDate() or minDatetime())
+        #    for b in bookings:
+        #        if b.hasStartDate():
+        #"""
+                
+
+
+
 #        if recordingManagerTags is not None:
 #            Logger.get('RecMan').info(" talkType    = %s" % recordingManagerTags["talkType"])
 #            Logger.get('RecMan').info(" talkId      = %s" % recordingManagerTags["talkId"])
@@ -368,6 +384,9 @@ class outputGenerator:
 
 #            Logger.get('RecMan').info('HEY now calling _contribToXML()...')
 
+
+#        if True:
+#            self._contribToXML(conf.getContributionById(showContribution),vars,includeSubContribution,includeMaterial,conf, showSubContribution=showSubContribution,out=out, recordingManagerTags=recordingManagerTags)
         # This case happens when called by RecordingManager to generate XML for a contribution:
         if showContribution != "all" and conf.getContributionById(showContribution) != None:
             self._contribToXML(conf.getContributionById(showContribution),vars,includeSubContribution,includeMaterial,conf, showSubContribution=showSubContribution,out=out, recordingManagerTags=recordingManagerTags)
@@ -583,6 +602,21 @@ class outputGenerator:
         out.openTag("session")
         out.writeTag("ID",session.getId())
 
+        if PluginsHolder().getPluginType("Collaboration").hasPlugin("WebEx") and PluginsHolder().getPluginType("Collaboration").getPlugin("WebEx").isActive():
+            Logger.get('RecMan').info("WebEx is active. Printing out list of WebEx bookings")
+            csbm = conf.getCSBookingManager()
+            bookings = csbm.getBookingList(filterByType = "WebEx", notify = False, onlyPublic = True)
+            bookings.sort(key = lambda b: b.getStartDate() or minDatetime())
+            for b in bookings:
+                Logger.get('WebEx').info("Session for booking %s, session id: %s " % ( str(b._getTitle()), str(b.getSessionId()) ) )
+                if session.getId() == b.getSessionId():
+                    Logger.get('WebEx').info("Found matching session for video booking!, session id: %s " % ( b.getSessionId() ) )
+                    out.openTag("videoBooking")
+                    out.writeTag("videoBookingTitle",b._getTitle())
+                    out.writeTag("videoBookingUrl",b.getURL())
+                    out.closeTag("videoBooking")
+
+
         out.writeTag("parentProtection", simplejson.dumps(session.getAccessController().isProtected()))
         out.writeTag("materialList", simplejson.dumps(self._generateMaterialList(session)))
 
@@ -677,6 +711,7 @@ class outputGenerator:
 #            Logger.get('RecMan').info(" talkId:      %s" % recordingManagerTags["talkId"])
 #            Logger.get('RecMan').info(" contentType: %s" % recordingManagerTags["contentType"])
 #            Logger.get('RecMan').info(" videoFormat: %s" % recordingManagerTags["videoFormat"])
+
 
         if not out:
             out = self._XMLGen
