@@ -141,6 +141,8 @@ class CSBooking(CSBookingBase):
             return self._accessPassword
 
     def getWebExPass(self):
+        if not hasattr(self, "_webExPass"):
+            self._webExPass = ""
         return self._webExPass
 
     def setWebExPass(self, webExPass):

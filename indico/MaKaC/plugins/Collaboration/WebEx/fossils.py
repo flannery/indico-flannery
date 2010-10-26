@@ -19,6 +19,7 @@
 
 from MaKaC.plugins.Collaboration.fossils import ICSBookingBaseConfModifFossil,\
     ICSErrorBaseFossil, ICSBookingBaseIndexingFossil
+from MaKaC.common.logger import Logger
 from MaKaC.common.fossilize import IFossil
 
 
@@ -44,9 +45,16 @@ class ICSBookingConfModifFossil(ICSBookingBaseConfModifFossil):
     def getWebExUser(self):
         pass
 
+def removeComplex(bookingParams):
+    del bookingParams["webExPass"]
+    del bookingParams["accessPassword"]
+    return bookingParams
+
 class ICSBookingIndexingFossil(ICSBookingBaseIndexingFossil):
 
     def getBookingParams(self):
+        """ Remove the booking params that are complex """
+        getBookingParams.convert = lambda bookingParams: removeComplex(bookingParams)
         pass
 
 class IParticipantFossil(IFossil):

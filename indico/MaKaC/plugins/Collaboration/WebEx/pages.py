@@ -68,22 +68,20 @@ class WExtra (WJSBase):
 
     def getVars(self):
         vars = WJSBase.getVars( self )
+        vars["SessionTimes"] = "{}"
+        vars["MinStartDate"] = ''
+        vars["MaxEndDate"] = ''
+        vars["AllowedStartMinutes"] = self._WebExOptions["allowedPastMinutes"].getValue()
         sessionTimes = ""
-#        sessionList = ""
         if not hasattr(self, "_conf") or self._conf == None:
             return vars
         sessionList = self._conf.getSessionList()
         for session  in sessionList:
             sessionTimes = sessionTimes + """{"id":"%s", "start":"%s", "end":"%s" },""" % (str(session.getId()), formatDateTime(session.getAdjustedStartDate()), formatDateTime(session.getAdjustedEndDate()) )
         vars["SessionTimes"] = '{ "sessions": [' + sessionTimes[:-1] + ']}'
-        vars["AllowedStartMinutes"] = self._WebExOptions["allowedPastMinutes"].getValue()
         if self._conf:
             vars["MinStartDate"] = formatDateTime(getMinStartDate(self._conf), format = "%a %d/%m %H:%M")
             vars["MaxEndDate"] = formatDateTime(getMaxEndDate(self._conf), format = "%a %d/%m %H:%M")
-        else:
-            vars["MinStartDate"] = ''
-            vars["MaxEndDate"] = ''
-
         return vars
 
 class WIndexing(WJSBase):
