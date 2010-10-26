@@ -286,13 +286,13 @@ class CollaborationTools(object):
         return l
 
     @classmethod
-    def pluginsWithEventSessionDisplay(cls):
+    def pluginsWithEventSessionDisplay(cls) :
         """ Utility function that returns a list of strings with the names of the
             collaboration plugins that want to display something in event display pages
         """
         l = []
         for pluginName in cls.getCollaborationPluginType().getPlugins():
-            if cls.getCSBookingClass(pluginName).hasEventSessionDisplay():
+            if hasattr(cls.getCSBookingClass(pluginName), "_hasEventSessionDisplay"):
                 l.append(pluginName)
         return l
 
