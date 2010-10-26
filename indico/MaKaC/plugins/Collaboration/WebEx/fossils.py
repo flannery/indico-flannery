@@ -47,9 +47,7 @@ class ICSBookingConfModifFossil(ICSBookingBaseConfModifFossil):
 class ICSBookingIndexingFossil(ICSBookingBaseIndexingFossil):
 
     def getBookingParams(self):
-        """ Overloading of ICSBookingBaseFossil's getBookingParams to remove the pin """
-    getBookingParams.convert = lambda bookingParams: removePin(bookingParams)
-
+        pass
 
 class IParticipantFossil(IFossil):
     def getId(self):

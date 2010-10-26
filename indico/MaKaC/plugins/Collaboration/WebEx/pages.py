@@ -69,9 +69,10 @@ class WExtra (WJSBase):
     def getVars(self):
         vars = WJSBase.getVars( self )
         sessionTimes = ""
-        sessionList = ""
-        if hasattr(self, "_conf") and self._conf != None and hasattr(self._conf, "getSessionList"):
-            sessionList = self._conf.getSessionList()
+#        sessionList = ""
+        if not hasattr(self, "_conf") or self._conf == None:
+            return vars
+        sessionList = self._conf.getSessionList()
         for session  in sessionList:
             sessionTimes = sessionTimes + """{"id":"%s", "start":"%s", "end":"%s" },""" % (str(session.getId()), formatDateTime(session.getAdjustedStartDate()), formatDateTime(session.getAdjustedEndDate()) )
         vars["SessionTimes"] = '{ "sessions": [' + sessionTimes[:-1] + ']}'
