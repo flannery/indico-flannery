@@ -127,6 +127,9 @@ class WebExError(CSErrorBase):
         elif self._errorID == "060017":
             self._errorType = "webex_duration_error"
             self._userMessage = _("The booking duration exceeds the maximum time duration limit set on this WebEx server.")
+        elif self._errorID == "060026":
+            self._errorType = "webex_blank_password"
+            self._userMessage = _("The meeting password cannot be left blank on this WebEx server.")
         elif self._errorID == "009001" or self._errorID == "009002" or self._errorID == "009003" or self._errorID == "009004":
             self._errorType = "webex_access_denied"
             self._userMessage = _("The server returned an access denied error")
