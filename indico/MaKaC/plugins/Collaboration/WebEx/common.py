@@ -30,6 +30,7 @@ from MaKaC.common.fossilize import Fossilizable, fossilizes
 from MaKaC.plugins.Collaboration.WebEx.fossils import IWebExWarningFossil, IWebExErrorFossil, \
     IChangesFromWebExErrorFossil, IParticipantFossil
 from cgi import escape
+from MaKaC.i18n import _
 
 def unescape(s):
     s = s.replace("&lt;","<")
@@ -110,31 +111,31 @@ class WebExError(CSErrorBase):
 
         if self._errorID == "000000":
             self._errorType = "webex_server_error"
-            self._userMessage = "Unknown error happened with WebEx server."
+            self._userMessage = _("Unknown error with WebEx server.")
         elif self._errorID == "030001" or self._errorID == "030006":
             self._errorType = "webex_invalid_user"
-            self._userMessage = "This WebEx server does not recognize the user ID provided."
+            self._userMessage = _("This WebEx server does not recognize the user ID provided.")
         elif self._errorID == "030007" or self._errorID == "030008":
             self._errorType = "webex_expired_user"
-            self._userMessage = "This WebEx user account is expired or inactive."
+            self._userMessage = _("This WebEx user account is expired or inactive.")
         elif self._errorID == "030002":
             self._errorType = "webex_invalid_pass"
-            self._userMessage = "Invalid password for this WebEx user"
+            self._userMessage = _("Invalid password for this WebEx user")
         elif self._errorID == "060001":
             self.errorType = "webex_meeting_not_found_error"
-            self._userMessage = "This WebEx meeting ID could not be located on the WebEx server"
+            self._userMessage = _("This WebEx meeting ID could not be located on the WebEx server")
         elif self._errorID == "060017":
             self._errorType = "webex_duration_error"
-            self._userMessage = "The booking duration exceeds the maximum time duration limit set on this WebEx server."
+            self._userMessage = _("The booking duration exceeds the maximum time duration limit set on this WebEx server.")
         elif self._errorID == "009001" or self._errorID == "009002" or self._errorID == "009003" or self._errorID == "009004":
             self._errorType = "webex_access_denied"
-            self._userMessage = "The server returned an access denied error"
+            self._userMessage = _("The server returned an access denied error")
         elif self._errorID == "009007" or self._errorID == "009008" or self._errorID == "009009":
             self._errorType = "webex_date_error"
-            self._userMessage = "The WebEx server did not accept the dates chosen."
+            self._userMessage = _("The WebEx server did not accept the dates chosen.")
         elif self._errorID == "009010" or self._errorID == "009011" or self._errorType == "webex_record_not_found":
             self._errorType = "webex_record_not_found"
-            self._userMessage = "The WebEx server was unable to locate the record."
+            self._userMessage = _("The WebEx server was unable to locate the record.")
 
         if self._errorType == None:
             self._errorType = "webex_unknown"
@@ -144,7 +145,6 @@ class WebExError(CSErrorBase):
 
     def getFaultCode(self):
         return self._errorType
-        pass
 
     def getInfo(self):
         return self._userMessage

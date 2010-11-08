@@ -374,10 +374,10 @@ class CSBooking(CSBookingBase):
                             self._bookingChangesHistory.append( _("""%s _("has changed"): %s""") % ( verboseKeyNames[key], params[key] ) )
             result = ExternalOperationsManager.execute(self, "modifyBooking", WebExOperations.modifyBooking, self)
             if isinstance(result, WebExError):
-                return WebExError( errorType = None, userMessage = _("The booking appears to have not been created according to the Indico system") )
+                return result
             self.getLoginURL()
         else:
-            return WebExError( errorType = None, userMessage = _("The booking appears to have not been created according to the Indico system") )
+            return WebExError( errorType = None, userMessage = _("This video booking could not be found.") )
         return None
 
     def _start(self):
