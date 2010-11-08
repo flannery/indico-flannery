@@ -61,7 +61,6 @@ class WMain (WJSBase):
         vars["MinStartDate"] = formatDateTime(getMinStartDate(self._conf))
         vars["MaxEndDate"] = formatDateTime(getMaxEndDate(self._conf))
         vars["AllowedMarginMinutes"] = self._WebExOptions["allowedMinutes"].getValue()
-
         return vars
 
 class WExtra (WJSBase):
