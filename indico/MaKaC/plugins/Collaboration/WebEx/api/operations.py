@@ -93,9 +93,7 @@ class WebExOperations(object):
 </serv:message>
 
 """ % ( { "username" : params['webExUser'], "password" : escape(params['webExPass']), "siteID" : getWebExOptionValueByName("WESiteID"), "partnerID" : getWebExOptionValueByName("WEPartnerID"), "meetingPassword": escape(params['accessPassword']), "startDate" : start_date, "duration" : booking.getDuration(), "meetingName" : escape(params['meetingTitle']), "description" : escape(params['meetingDescription']), "participants": participant_xml } )
-            Logger.get('WebEx').debug( "WebEx Response:\n\n%s" % ( request_xml ) )
             response_xml = sendXMLRequest( request_xml )
-            Logger.get('WebEx').debug( "WebEx Response:\n\n%s" % ( response_xml ) )
             dom = xml.dom.minidom.parseString( response_xml )
             status = dom.getElementsByTagName( "serv:result" )[0].firstChild.toxml('utf-8')
             if status == "SUCCESS":
@@ -129,7 +127,6 @@ class WebExOperations(object):
             diff = end_time - start_time
             minutes, seconds = divmod(diff.seconds, 60)
             duration = minutes + diff.days * 1440
-            Logger.get('WebEx').debug( "Found duration %s" % str(duration) )
             start_date = start_time.strftime( "%m/%d/%Y %H:%M" )
             request_xml = """<?xml version="1.0\" encoding="UTF-8"?>
 <serv:message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:serv=\"http://www.webex.com/schemas/2002/06/service" >
@@ -172,13 +169,10 @@ class WebExOperations(object):
 </serv:message>
 
 """ % ( { "username" : params['webExUser'], "password" : escape(params['webExPass']), "siteID" : getWebExOptionValueByName("WESiteID"), "partnerID" : getWebExOptionValueByName("WEPartnerID"), "meetingPassword": escape(params['accessPassword']), "startDate" : start_date, "duration" : int(duration), "meetingName" : escape(params['meetingTitle']), "meetingKey" : booking._webExKey, "description": escape(params["meetingDescription"]), "participants": makeParticipantXML(booking._participants) } )
-            Logger.get('WebEx').debug( "WebEx Modify Request:\n\n%s" % ( request_xml ) )
             response_xml = sendXMLRequest( request_xml )
-            Logger.get('WebEx').debug( "WebEx Modify Response:\n\n%s" % ( response_xml ) )
             dom = xml.dom.minidom.parseString( response_xml )
             status = dom.getElementsByTagName( "serv:result" )[0].firstChild.toxml('utf-8')
             if status != "SUCCESS":
-                Logger.get('WebEx').debug( "WebEx Modify failed.... Sending error to user" )
                 errorID = dom.getElementsByTagName( "serv:exceptionID" )[0].firstChild.toxml('utf-8')
                 errorReason = dom.getElementsByTagName( "serv:reason" )[0].firstChild.toxml('utf-8')
                 return WebExError( errorID, userMessage = errorReason )
@@ -217,7 +211,6 @@ class WebExOperations(object):
    </body>
 </serv:message>
 """ % { "username" : params['webExUser'], "password" : escape(params['webExPass']), "siteID" : getWebExOptionValueByName("WESiteID"), "partnerID" : getWebExOptionValueByName("WEPartnerID"), "webex_key": booking._webExKey }
-        Logger.get('WebEx').debug( "delete func. is booking._created? %s XML:\n%s " % ( booking._created, request_xml ) )
         response_xml = sendXMLRequest( request_xml )
         dom = xml.dom.minidom.parseString( response_xml )
         status = dom.getElementsByTagName( "serv:result" )[0].firstChild.toxml('utf-8')
@@ -225,14 +218,10 @@ class WebExOperations(object):
             errorID = dom.getElementsByTagName( "serv:exceptionID" )[0].firstChild.toxml('utf-8')
             errorReason = dom.getElementsByTagName( "serv:reason" )[0].firstChild.toxml('utf-8')
             booking._warning = WebExWarning( "WebEx error reported: %s" % errorReason )
-            Logger.get('WebEx').info( "In delete function, appears to have failed: %s" % response_xml )
             return WebExError( errorID, userMessage = errorReason )
-        else:
-            Logger.get('WebEx').info( "In delete function, appears to have been successful" )
 
         if booking._created:
             try:
-                #Logger.get('WebEx').info("I am in the mailer block")
                 recipients = []
                 for k in booking._participants.keys():
                     recipients.append( booking._participants[k]._email )
