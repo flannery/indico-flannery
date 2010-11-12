@@ -237,7 +237,7 @@ class CSBooking(CSBookingBase):
         maxEndDate = getMaxEndDate(self.getConference())
         Logger.get('WebEx').info( "Max end date: " + minStartDate.strftime("%m/%d/%Y %H:%M:%S") )
         if self.getAdjustedEndDate() > maxEndDate:
-            raise WebExException("Cannot create a booking %s minutes after before the Indico event's end date. Please create it before %s"%(self._WebExOptions["allowedMinutes"].getValue(), formatDateTime(maxEndDate)))
+            raise WebExException("Cannot create a booking %s minutes after the Indico event's end date. Please create it before %s"%(self._WebExOptions["allowedMinutes"].getValue(), formatDateTime(maxEndDate)))
 
         return False
 
@@ -288,7 +288,7 @@ class CSBooking(CSBookingBase):
         if self._created:
             now = nowutc()
             self._canBeDeleted = True
-            if self.getStartDate() - timedelta(minutes=self._WebExOptions["allowedMinutes"].getValue()) < now and self.getEndDate() + timedelta(self._WebExOptions["allowedMinutes"].getValue()) < now:
+            if self.getStartDate() - timedelta(minutes=self._WebExOptions["allowedMinutes"].getValue()) < now and now < self.getEndDate():
                 self._canBeStarted = True
                 self._canBeDeleted = False
                 if changeMessage:
