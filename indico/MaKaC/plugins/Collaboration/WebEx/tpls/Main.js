@@ -28,12 +28,12 @@
 
                 // check start date is not before the minimum start date (event start date - <%= AllowedMarginMinutes %> min )
                 if (startDate < IndicoUtil.parseDateTime("<%= MinStartDate %>")) {
-                    errors.push($T("Start date cannot be more than <%= AllowedMarginMinutes %> minutes before the Indico event start date. Please choose it after <%= MinStartDate %>"));
+                    errors.push($T("Start date more than <%= AllowedMarginMinutes %> minutes before event"));
                 }
 
                 // check start date is not after the maximum start date (event end date + <%= AllowedMarginMinutes %> min )
                 if (startDate > IndicoUtil.parseDateTime("<%= MaxEndDate %>")) {
-                    errors.push($T("Start date cannot be more than <%= AllowedMarginMinutes %> minutes after the Indico event end date. Please choose it before <%= MaxEndDate %>"));
+                    errors.push($T("Start date more than <%= AllowedMarginMinutes %> minutes after event"));
                 }
 
                 // check start date is not after end date, if end date exists
@@ -53,17 +53,17 @@
 
                 //check end date is not in the past
                 if (beforeNow(endDate)) {
-                    errors.push($T("End date cannot be before the past <%= AllowedStartMinutes %> minutes"));
+                    errors.push($T("End date cannot be before the current time"));
                 }
 
                 // check end date is not after the maximum start date (event end date + <%= AllowedMarginMinutes %> min )
                 if (endDate > IndicoUtil.parseDateTime("<%= MaxEndDate %>")) {
-                    errors.push($T("End date cannot be more than <%= AllowedMarginMinutes %> minutes after the Indico event end date. Please choose it before <%= MaxEndDate %>"));
+                    errors.push($T("End date more than <%= AllowedMarginMinutes %> minutes after event"));
                 }
 
                 // check start date is not before the minimum start date (event start date - <%= AllowedMarginMinutes %> min )
                 if (endDate < IndicoUtil.parseDateTime("<%= MinStartDate %>")) {
-                    errors.push($T("End date cannot be more than <%= AllowedMarginMinutes %> minutes before the Indico event start date. Please choose it after <%= MinStartDate %>"));
+                    errors.push($T("End date more than <%= AllowedMarginMinutes %> minutes before the event"));
                 }
 
                 // check start date is not after end date, if start date exists
