@@ -290,7 +290,6 @@ class CSBooking(CSBookingBase):
             self._canBeDeleted = True
             if self.getStartDate() - timedelta(minutes=self._WebExOptions["allowedMinutes"].getValue()) < now and now < self.getEndDate():
                 self._canBeStarted = True
-                self._canBeDeleted = False
                 if changeMessage:
                     self._statusMessage = _("Ready to start!")
                     self._statusClass = "statusMessageOK"
