@@ -39,6 +39,11 @@ globalOptions = [
                       "defaultValue": [],
                       "editable": True,
                       "visible": True} ),
+    ("additionalEmails", {"description": _("Additional email addresses who will receive notifications (always)"),
+                          "type": list,
+                          "defaultValue": [],
+                          "editable": True,
+                          "visible": True}),
     #WebEx Options
     ("sendMailNotifications", {"description" : _("Should mail notifications be sent to WebEx admins?"),
                "type": bool,
