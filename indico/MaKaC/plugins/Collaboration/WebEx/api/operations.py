@@ -31,7 +31,7 @@ from datetime import datetime
 from time import strptime
 from MaKaC.common.logger import Logger
 from MaKaC.plugins.Collaboration.WebEx.common import WebExControlledException, \
-    WebExError, WebExWarning, getWebExOptionValueByName, WebExException, \
+    WebExError, WebExWarning, getWebExOptionValueByName,\
     makeParticipantXML, sendXMLRequest
 from MaKaC.plugins.Collaboration.WebEx.mail import WebExParticipantNotification
 from MaKaC.common.mail import GenericMailer
@@ -49,12 +49,10 @@ class WebExOperations(object):
     """
     @classmethod
     def createBooking( cls, booking ):
-        try:
-            params = booking.getBookingParams()
-
-            participant_xml = makeParticipantXML(booking._participants)
-            start_date = booking.getAdjustedStartDate('UTC').strftime( "%m/%d/%Y %H:%M" )
-            request_xml = """<?xml version="1.0\" encoding="UTF-8"?>
+        params = booking.getBookingParams()
+        participant_xml = makeParticipantXML(booking._participants)
+        start_date = booking.getAdjustedStartDate('UTC').strftime( "%m/%d/%Y %H:%M" )
+        request_xml = """<?xml version="1.0\" encoding="UTF-8"?>
 <serv:message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:serv=\"http://www.webex.com/schemas/2002/06/service" >
 <header>
   <securityContext>
@@ -93,42 +91,37 @@ class WebExOperations(object):
 </serv:message>
 
 """ % ( { "username" : params['webExUser'], "password" : escape(params['webExPass']), "siteID" : getWebExOptionValueByName("WESiteID"), "partnerID" : getWebExOptionValueByName("WEPartnerID"), "meetingPassword": escape(params['accessPassword']), "startDate" : start_date, "duration" : booking.getDuration(), "meetingName" : escape(params['meetingTitle']), "description" : escape(params['meetingDescription']), "participants": participant_xml } )
-            response_xml = sendXMLRequest( request_xml )
-            dom = xml.dom.minidom.parseString( response_xml )
-            status = dom.getElementsByTagName( "serv:result" )[0].firstChild.toxml('utf-8')
-            if status == "SUCCESS":
-                booking.setWebExKey( dom.getElementsByTagName( "meet:meetingkey" )[0].firstChild.toxml('utf-8') )
-                booking._checkStatus()
+        response_xml = sendXMLRequest( request_xml )
+        dom = xml.dom.minidom.parseString( response_xml )
+        status = dom.getElementsByTagName( "serv:result" )[0].firstChild.toxml('utf-8')
+        if status == "SUCCESS":
+            booking.setWebExKey( dom.getElementsByTagName( "meet:meetingkey" )[0].firstChild.toxml('utf-8') )
+            booking._checkStatus()
 
-                if params.has_key('sendAttendeesEmail') and params['sendAttendeesEmail'][0].lower() == 'yes':
-                    recipients = []
-                    for k in booking._participants.keys():
-                        recipients.append( booking._participants[k]._email )
-                    if len(recipients)>0:
-                        notification = WebExParticipantNotification( booking, recipients, 'new' )
-                        GenericMailer.send( notification )
-            else:
-                booking._url = ""
-                errorID = dom.getElementsByTagName( "serv:exceptionID" )[0].firstChild.toxml('utf-8')
-                errorReason = dom.getElementsByTagName( "serv:reason" )[0].firstChild.toxml('utf-8')
-                return WebExError( errorID, userMessage = errorReason )
-        except WebExControlledException, e:
-            Logger.get('WebEx').debug( "caught exception in function _create" )
-            raise WebExException(_("The booking could not be created due to a problem with the WebEx Server\n.It sent the following message: ") + e.message, e)
-        return None
+            if params.has_key('sendAttendeesEmail') and params['sendAttendeesEmail'][0].lower() == 'yes':
+                recipients = []
+                for k in booking._participants.keys():
+                    recipients.append( booking._participants[k]._email )
+                if len(recipients)>0:
+                    notification = WebExParticipantNotification( booking, recipients, 'new' )
+                    GenericMailer.send( notification )
+        else:
+            booking._url = ""
+            errorID = dom.getElementsByTagName( "serv:exceptionID" )[0].firstChild.toxml('utf-8')
+            errorReason = dom.getElementsByTagName( "serv:reason" )[0].firstChild.toxml('utf-8')
+            return WebExError( errorID, userMessage = errorReason )
 
     @classmethod
     def modifyBooking( cls, booking ):
-        try:
-            params = booking.getBookingParams()
-            booking.setAccessPassword( params['accessPassword'] )
-            start_time = datetime( *strptime( str(booking.getAdjustedStartDate('UTC'))[:-9], "%Y-%m-%d %H:%M" )[0:7])
-            end_time = datetime( *strptime( str(booking.getAdjustedEndDate('UTC'))[:-9], "%Y-%m-%d %H:%M" )[0:7])
-            diff = end_time - start_time
-            minutes, seconds = divmod(diff.seconds, 60)
-            duration = minutes + diff.days * 1440
-            start_date = start_time.strftime( "%m/%d/%Y %H:%M" )
-            request_xml = """<?xml version="1.0\" encoding="UTF-8"?>
+        params = booking.getBookingParams()
+        booking.setAccessPassword( params['accessPassword'] )
+        start_time = datetime( *strptime( str(booking.getAdjustedStartDate('UTC'))[:-9], "%Y-%m-%d %H:%M" )[0:7])
+        end_time = datetime( *strptime( str(booking.getAdjustedEndDate('UTC'))[:-9], "%Y-%m-%d %H:%M" )[0:7])
+        diff = end_time - start_time
+        minutes, seconds = divmod(diff.seconds, 60)
+        duration = minutes + diff.days * 1440
+        start_date = start_time.strftime( "%m/%d/%Y %H:%M" )
+        request_xml = """<?xml version="1.0\" encoding="UTF-8"?>
 <serv:message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:serv=\"http://www.webex.com/schemas/2002/06/service" >
 <header>
   <securityContext>
@@ -169,26 +162,24 @@ class WebExOperations(object):
 </serv:message>
 
 """ % ( { "username" : params['webExUser'], "password" : escape(params['webExPass']), "siteID" : getWebExOptionValueByName("WESiteID"), "partnerID" : getWebExOptionValueByName("WEPartnerID"), "meetingPassword": escape(params['accessPassword']), "startDate" : start_date, "duration" : int(duration), "meetingName" : escape(params['meetingTitle']), "meetingKey" : booking._webExKey, "description": escape(params["meetingDescription"]), "participants": makeParticipantXML(booking._participants) } )
-            response_xml = sendXMLRequest( request_xml )
-            dom = xml.dom.minidom.parseString( response_xml )
-            status = dom.getElementsByTagName( "serv:result" )[0].firstChild.toxml('utf-8')
-            if status != "SUCCESS":
-                errorID = dom.getElementsByTagName( "serv:exceptionID" )[0].firstChild.toxml('utf-8')
-                errorReason = dom.getElementsByTagName( "serv:reason" )[0].firstChild.toxml('utf-8')
-                return WebExError( errorID, userMessage = errorReason )
+        response_xml = sendXMLRequest( request_xml )
+        dom = xml.dom.minidom.parseString( response_xml )
+        status = dom.getElementsByTagName( "serv:result" )[0].firstChild.toxml('utf-8')
+        if status != "SUCCESS":
+            errorID = dom.getElementsByTagName( "serv:exceptionID" )[0].firstChild.toxml('utf-8')
+            errorReason = dom.getElementsByTagName( "serv:reason" )[0].firstChild.toxml('utf-8')
+            return WebExError( errorID, userMessage = errorReason )
 
-            booking.bookingOK()
-            booking.checkCanStart()
-            booking._checkStatus()
-            if params.has_key('sendAttendeesEmail') and params['sendAttendeesEmail'][0].lower() == 'yes':
-                recipients = []
-                for k in booking._participants.keys():
-                    recipients.append( booking._participants[k]._email )
-                if len(recipients)>0:
-                    notification = WebExParticipantNotification( booking, recipients, 'modify' )
-                    GenericMailer.send( notification )
-        except WebExControlledException, e:
-            raise WebExException(_("The booking could not be modified due to a problem with the WebEx Server.\n") )
+        booking.bookingOK()
+        booking.checkCanStart()
+        booking._checkStatus()
+        if params.has_key('sendAttendeesEmail') and params['sendAttendeesEmail'][0].lower() == 'yes':
+            recipients = []
+            for k in booking._participants.keys():
+                recipients.append( booking._participants[k]._email )
+            if len(recipients)>0:
+                notification = WebExParticipantNotification( booking, recipients, 'modify' )
+                GenericMailer.send( notification )
         return None
 
     @classmethod

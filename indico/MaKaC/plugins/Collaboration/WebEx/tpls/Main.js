@@ -79,7 +79,6 @@
     },
 
     errorHandler: function(event, error) {
-//        alert( "Found error:" + error.toSource() );
         if (event == 'create' || event == 'edit' || event == 'checkStatus') {
             if (error.faultCode == 'webex_expired_user' || error.faultCode == 'webex_invalid_user') {
                 var message = $T('The specified WebEx user ID has either expired or is inactive.');

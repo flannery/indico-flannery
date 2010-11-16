@@ -30,7 +30,7 @@ from datetime import timedelta, datetime
 from MaKaC.common.utils import formatDateTime
 from MaKaC.common.timezoneUtils import nowutc, naive2local, getAdjustedDate
 from MaKaC.plugins.Collaboration.base import CSBookingBase
-from MaKaC.plugins.Collaboration.WebEx.common import WebExControlledException, WebExException,\
+from MaKaC.plugins.Collaboration.WebEx.common import WebExControlledException,\
     getMinStartDate, getMaxEndDate, Participant, sendXMLRequest, \
     WebExError, getWebExOptionValueByName, makeTime, findDuration, unescape
 from MaKaC.plugins.Collaboration.WebEx.api.operations import WebExOperations
@@ -102,18 +102,14 @@ class CSBooking(CSBookingBase):
         self._bookingChangesHistory = []
 
     def getParticipantList(self, sorted = False):
-        Logger.get('WebEx').debug( "In getParticipantList" )
         if sorted:
             keys = self._participants.keys()
             keys.sort()
-            for k in keys:
-                Logger.get('WebEx').info( "Adding: " + self._participants[k]._email )
             return [self._participants[k] for k in keys]
         else:
             return self._participants.values()
 
     def getParticipants(self):
-        Logger.get('WebEx').debug( "In getParticipants" )
         return fossilize(self.getParticipantList(sorted = True))
 
     def getSessionId(self):
@@ -121,12 +117,10 @@ class CSBooking(CSBookingBase):
             return self._bookingParams["session"]
 
     def setParticipants(self, participants):
-        Logger.get('WebEx').debug( "In setParticipants" )
         participantsCopy = dict(self._participants)
         self._participants = {}
         for p in participants:
             id = p.get("participantId", None)
-            Logger.get('WebEx').debug( "Adding a participant: %s" % str(id) )
             if id is None or not id in participantsCopy:
                 id = self._participantIdCounter.newCount()
             participantObject = Participant(self, id, p)
@@ -206,38 +200,37 @@ class CSBooking(CSBookingBase):
         return "WebEx"
 
     def _checkBookingParams(self):
+        params = self.getBookingParams()
         for participant in self._participants.itervalues():
             if re.match("^.+\\@(\\[?)[a-zA-Z0-9\\-\\.]+\\.([a-zA-Z]{2,3}|[0-9]{1,3})(\\]?)$", participant._email) == None:
-                raise WebExException("Participant email address (" + participant._email + ") for " + participant._firstName + " " + participant._lastName +" is invalid. ")
+                raise WebExError(errorType = None, userMessage = "Participant email address (" + participant._email + ") for " + participant._firstName + " " + participant._lastName +" is invalid. ")
 
-        if len(self._bookingParams["meetingTitle"].strip()) == 0:
-            raise WebExException("meetingTitle parameter (" + str(self._bookingParams["meetingTitle"]) +" ) is empty for booking with id: " + str(self._id))
+        if len(params["meetingTitle"].strip()) == 0:
+            raise WebExError(errorType = None, userMessage = _("Title cannot be left blank"))
 
-        if len(self._bookingParams["meetingDescription"].strip()) == 0:
-            raise WebExException("meetingDescription parameter (" + str(self._bookingParams["meetingDescription"]) +" ) is empty for booking with id: " + str(self._id))
+        if len(params["meetingDescription"].strip()) == 0:
+            raise WebExError(errorType = None, userMessage = _("Description cannot be left blank."))
 
-        if len(self._bookingParams["webExUser"].strip()) == 0:
-            raise WebExException(_("WebEx username is empty.  The booking cannot continue without this."))
+        if len(params["webExUser"].strip()) == 0:
+            raise WebExError(errorType = None, userMessage = _("WebEx username is empty.  The booking cannot continue without this."))
 
         if len(self.getWebExPass().strip()) == 0:
-            raise WebExException(_("WebEx password is empty.  The booking cannot continue without this."))
+            raise WebExError(errorType = None, userMessage = _("WebEx password is empty.  The booking cannot continue without this."))
 
-        if self._startDate > self._endDate:
-            raise WebExException(_("Start date of booking cannot be after end date. Booking id: ") + str(self._id))
+        if params["startDate"] > params["endDate"]:
+            raise WebExError(errorType = None, userMessage = _("Start date of booking cannot be after end date.") + str(self._id))
 
         allowedStartMinutes = self._WebExOptions["allowedPastMinutes"].getValue()
         if self.getAdjustedStartDate('UTC')  < (nowutc() - timedelta(minutes = allowedStartMinutes )):
-            raise WebExException("Cannot create booking before the past %s minutes. Booking id: %s"% (allowedStartMinutes, str(self._id)))
+            raise WebExError(errorType = None, userMessage = _("Cannot create booking before the past %s minutes."))
 
         minStartDate = getMinStartDate(self.getConference())
-        Logger.get('WebEx').info( "Min start date: " + minStartDate.strftime("%m/%d/%Y %H:%M:%S") )
         if self.getAdjustedStartDate() < minStartDate:
-            raise WebExException("Cannot create a booking %s minutes before the Indico event's start date. Please create it after %s"%(self._WebExOptions["allowedMinutes"].getValue(), formatDateTime(minStartDate)))
+            raise WebExError(errorType = None, userMessage = _("Cannot create a booking %s minutes before the Indico event's start date."))
 
         maxEndDate = getMaxEndDate(self.getConference())
-        Logger.get('WebEx').info( "Max end date: " + minStartDate.strftime("%m/%d/%Y %H:%M:%S") )
         if self.getAdjustedEndDate() > maxEndDate:
-            raise WebExException("Cannot create a booking %s minutes after the Indico event's end date. Please create it before %s"%(self._WebExOptions["allowedMinutes"].getValue(), formatDateTime(maxEndDate)))
+            raise WebExError(errorType = None, userMessage = _("Cannot create a booking %s minutes after the Indico event's end date."))
 
         return False
 
@@ -288,7 +281,8 @@ class CSBooking(CSBookingBase):
         if self._created:
             now = nowutc()
             self._canBeDeleted = True
-            if self.getStartDate() - timedelta(minutes=self._WebExOptions["allowedMinutes"].getValue()) < now and now < self.getEndDate():
+#            if self.getStartDate() - timedelta(minutes=self._WebExOptions["allowedMinutes"].getValue()) < now and now < self.getEndDate():
+            if self.getStartDate() < now and now < self.getEndDate():
                 self._canBeStarted = True
                 if changeMessage:
                     self._statusMessage = _("Ready to start!")
@@ -337,11 +331,9 @@ class CSBooking(CSBookingBase):
             "accessPassword" : "Meeting password",
             "session" : "Session"
         }
-        Logger.get('WebEx').debug( "in _modify" )
         if self._created:
             self._bookingChangesHistory
             params = self.getBookingParams()
-            Logger.get('WebEx').debug( "In modify: params = %s" % params )
             # Create entries for the keys that aren't always present
             hidden_keys = ["hidden", "notifyOnDateChanges", "sendAttendeesEmail"]
             for key in hidden_keys:
@@ -403,9 +395,7 @@ class CSBooking(CSBookingBase):
 </body>
 </serv:message>
 """ % ( { "username" : params['webExUser'], "password" : self.getWebExPass(), "siteID" : getWebExOptionValueByName("WESiteID"), "partnerID" : getWebExOptionValueByName("WEPartnerID"), "webExKey":self.getWebExKey() } )
-            Logger.get('WebEx').debug( "Start request XML:\n %s" % request_xml )
             response_xml = sendXMLRequest( request_xml )
-            Logger.get('WebEx').debug( "Start response XML:\n %s" % response_xml )
             dom = xml.dom.minidom.parseString( response_xml )
             status = dom.getElementsByTagName( "serv:result" )[0].firstChild.toxml('utf-8')
             if status == "SUCCESS":
@@ -419,7 +409,6 @@ class CSBooking(CSBookingBase):
         """ Starts an WebEx meeting.
             A last check on the WebEx server is performed.
         """
-        Logger.get('WebEx').debug( "In get login URL:" )
         if self._canBeStarted:
             params = self.getBookingParams()
             request_xml = """<?xml version="1.0\" encoding="UTF-8"?>
@@ -440,16 +429,13 @@ class CSBooking(CSBookingBase):
 </body>
 </serv:message>
 """ % ( { "username" : params['webExUser'], "password" : self.getWebExPass(), "siteID" : getWebExOptionValueByName("WESiteID"), "partnerID" : getWebExOptionValueByName("WEPartnerID"), "webExKey":self.getWebExKey(), 'meetingPW':self.getAccessPassword() } )
-            Logger.get('WebEx').debug( "Start request XML:\n %s" % request_xml )
             response_xml = sendXMLRequest( request_xml )
-            Logger.get('WebEx').debug( "Start response XML:\n %s" % response_xml )
             dom = xml.dom.minidom.parseString( response_xml )
             status = dom.getElementsByTagName( "serv:result" )[0].firstChild.toxml('utf-8')
             if status == "SUCCESS":
                 self._url = dom.getElementsByTagName( "meet:joinMeetingURL" )[0].firstChild.toxml('utf-8').replace('&amp;','&')
                 self._permissionToStart = True
             else:
-                Logger.get('WebEx').debug( "Error getting login URL" )
                 return WebExError( errorType = None, userMessage = _("There was an error attempting to get the join booking URL from the WebEx server.") )
         return None
 
@@ -477,9 +463,8 @@ class CSBooking(CSBookingBase):
 
     def _checkStatus(self):
         if self._created:
-            try:
-                params = self.getBookingParams()
-                request_xml = """<?xml version="1.0" encoding="ISO-8859-1"?>
+            params = self.getBookingParams()
+            request_xml = """<?xml version="1.0" encoding="ISO-8859-1"?>
 <serv:message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
    <header>
       <securityContext>
@@ -497,20 +482,15 @@ class CSBooking(CSBookingBase):
 </serv:message>
 
 """ % { "username" : params['webExUser'], "password" : self.getWebExPass(), "siteID" : getWebExOptionValueByName("WESiteID"), "partnerID" : getWebExOptionValueByName("WEPartnerID"), "webex_key": self.getWebExKey() }
-                Logger.get('WebEx').debug( "Check status request XML:\n%s " % ( request_xml ) )
-                response_xml = sendXMLRequest( request_xml )
-                Logger.get('WebEx').debug( "Check status response XML:\n%s " % ( response_xml ) )
-                dom = xml.dom.minidom.parseString( response_xml )
-                status = dom.getElementsByTagName( "serv:result" )[0].firstChild.toxml('utf-8')
-                if status != "SUCCESS":
-                    errorID = dom.getElementsByTagName( "serv:exceptionID" )[0].firstChild.toxml('utf-8')
-                    errorReason = dom.getElementsByTagName( "serv:reason" )[0].firstChild.toxml('utf-8')
-                    return WebExError( errorID, userMessage = errorReason )
-                self.assignAttributes( response_xml )
-
-            except WebExControlledException, e:
-                raise WebExException(_("Information could not be retrieved due to a problem with the WebEx Server\n.The WebEx Server sent the following error message: ") + e.message, e)
-            return None
+            response_xml = sendXMLRequest( request_xml )
+            dom = xml.dom.minidom.parseString( response_xml )
+            status = dom.getElementsByTagName( "serv:result" )[0].firstChild.toxml('utf-8')
+            if status != "SUCCESS":
+                errorID = dom.getElementsByTagName( "serv:exceptionID" )[0].firstChild.toxml('utf-8')
+                errorReason = dom.getElementsByTagName( "serv:reason" )[0].firstChild.toxml('utf-8')
+                return WebExError( errorID, userMessage = errorReason )
+            self.assignAttributes( response_xml )
+        return None
 
     def _delete(self):
         """
@@ -562,13 +542,11 @@ class CSBooking(CSBookingBase):
                 if key == "meet:startDate":
                     if dom.getElementsByTagName( key )[0].firstChild.toxml('utf-8') != start_date:
                         time_discrepancy = True
-                        Logger.get('WebEx').info( "Local and WebEx time are different. We will need to calculate it." )
                 if key == "meet:duration":
                     if dom.getElementsByTagName( key )[0].firstChild.toxml('utf-8') != str(self._duration):
                         time_discrepancy = True
                         user_msg = "Updated booking duration from " + str(self._duration) + " minutes to " + str( dom.getElementsByTagName( key )[0].firstChild.toxml('utf-8') + " minutes")
                         self._duration = int( dom.getElementsByTagName( key )[0].firstChild.toxml('utf-8') )
-                        Logger.get('WebEx').info( user_msg )
                 continue
             try:
                 if unescape(dom.getElementsByTagName( key )[0].firstChild.toxml('utf-8')) != unescape(str(oldArguments[key])) and key in verboseKeyNames:
@@ -578,7 +556,6 @@ class CSBooking(CSBookingBase):
                     elif key == "meet:agenda":
                         self._bookingParams["meetingDescription"] = unescape(dom.getElementsByTagName( key )[0].firstChild.toxml('utf-8'))
 
-                    Logger.get('WebEx').info( "WebEx Val: '" + dom.getElementsByTagName( key )[0].firstChild.toxml('utf-8') + "' and local:'" + str(oldArguments[key]) )
             except:
                 Logger.get('WebEx').info( "caught exception on: " + key )
                 pass
@@ -589,18 +566,13 @@ class CSBooking(CSBookingBase):
         # If not, we then apply the offset to keep it simple
         calc_time = naive2local( datetime( *strptime( dom.getElementsByTagName( "meet:startDate" )[0].firstChild.toxml('utf-8'), "%m/%d/%Y %H:%M:%S" )[0:7]), 'UTC' )
         tz_id = dom.getElementsByTagName( "meet:timeZoneID" )[0].firstChild.toxml('utf-8')
-        Logger.get('WebEx').info( "webex TZ id: " + tz_id )
-        Logger.get('WebEx').info( "my start date: " + self.getAdjustedStartDate('UTC').strftime("%m/%d/%Y %H:%M:%S") )
         # If the specified time zone is not UTC, contact WebEx
         # and find the offset from UTC we must account for
         if tz_id != 20:
             time_offset_mins = self.getWebExTimeZoneToUTC( tz_id, calc_time.strftime("%m/%d/%Y %H:%M:%S"))
-            Logger.get('WebEx').info( "raw webex time: " + calc_time.strftime("%A, %d. %B %Y %I:%M%p") )
-            Logger.get('WebEx').info( "time_offset_mins: " + str(time_offset_mins))
             WE_time = calc_time + timedelta( minutes= -1*int( time_offset_mins ) )
             #Now that we have the REAL time, figure out if there REALLY is a time difference
             if time_discrepancy == True:
-                Logger.get('WebEx').info( "webex time with offset in event time zone: " + getAdjustedDate(WE_time, tz=self._conf.getTimezone()).strftime("%m/%d/%Y %H:%M:%S") )
                 if self._startDate != getAdjustedDate(WE_time, tz=self._conf.getTimezone()):
                     self._startDate = getAdjustedDate(WE_time, tz=self._conf.getTimezone())
                     changesFromWebEx.append("Updated start time to match WebEx entry")

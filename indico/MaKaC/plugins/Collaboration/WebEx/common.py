@@ -237,10 +237,6 @@ class ChangesFromWebExError(WebExError):
     def getChanges(self):
         return self._changes
 
-class WebExException(CollaborationException):
-    def __init__(self, msg, inner = None):
-        CollaborationException.__init__(self, msg, 'WebEx', inner)
-
 class WebExControlledException(Exception):
     def __init__(self, message):
         self.message = message
