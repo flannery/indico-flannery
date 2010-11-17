@@ -53,6 +53,7 @@ def removeComplex(bookingParams):
 class ICSBookingIndexingFossil(ICSBookingBaseIndexingFossil):
     def getBookingParams(self):
         """ Remove the booking params that are complex """
+        Logger.get('Logger WebEx').debug("In getBookingParams")
         getBookingParams.convert = lambda bookingParams: removeComplex(bookingParams)
         pass
 

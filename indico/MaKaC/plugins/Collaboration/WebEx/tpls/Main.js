@@ -94,15 +94,20 @@
                 IndicoUtil.markInvalidField($E('startDate'), "WebEx has rejected the date");
                 IndicoUtil.markInvalidField($E('endDate'), "WebEx has rejected the date");
             }
-            else if (error.faultCode == 'webex_unknown') {
-                CSErrorPopup($T("Unknown WebEx Error"), [error.info]);
+            else if (error.faultCode == 'webex_invalid_pass_characters') {
+                CSErrorPopup($T("Invalid Meeting Password"), [error.info]);
             }
             else if (error.faultCode == 'webex_record_not_found') {
                 var message = $T('WebEx could not find a record with this meeting key.');
                 CSErrorPopup($T("Meeting not found"), [error.info]);
             }
-            else {
-                CSErrorPopup($T("WebEx Error"), [error.info]);
+            else {  //if (error.faultCode == 'webex_unknown'){
+                var text = [error.info];
+                text[0].replace("&quot;", '"');
+                text[0].replace("&amp;", '&');
+                text[0].replace("&lt;", '<');
+                text[0].replace("&gt;", '>');
+                CSErrorPopup($T("WebEx Error"), text);
             }
         }
 
@@ -187,7 +192,7 @@
             '<\/td><\/tr>'+
 
             '<tr><td class="collaborationInfoLeftCol">' + $T('Auto-join URL:') + '<\/td><td>' +
-                (booking.url? booking.url : $T("not assigned yet")) +
+                (booking.url? '<a href="' + booking.url + '" target="_blank">' + booking.url + '</a>' : $T("not assigned yet")) +
             '<\/td><\/tr>'+
 
             '<tr><td class="collaborationInfoLeftCol">' + $T('Indico booking ID:') + '<\/td><td>' +

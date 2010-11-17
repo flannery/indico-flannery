@@ -30,9 +30,8 @@ from datetime import timedelta, datetime
 from MaKaC.common.utils import formatDateTime
 from MaKaC.common.timezoneUtils import nowutc, naive2local, getAdjustedDate
 from MaKaC.plugins.Collaboration.base import CSBookingBase
-from MaKaC.plugins.Collaboration.WebEx.common import WebExControlledException,\
-    getMinStartDate, getMaxEndDate, Participant, sendXMLRequest, \
-    WebExError, getWebExOptionValueByName, makeTime, findDuration, unescape
+from MaKaC.plugins.Collaboration.WebEx.common import getMinStartDate, getMaxEndDate,\
+    Participant, sendXMLRequest, WebExError, getWebExOptionValueByName, makeTime, findDuration, unescape
 from MaKaC.plugins.Collaboration.WebEx.api.operations import WebExOperations
 from MaKaC.common.logger import Logger
 from MaKaC.i18n import _
@@ -44,6 +43,9 @@ from MaKaC.plugins.Collaboration.WebEx.mail import NewWebExMeetingNotificationAd
 from MaKaC.plugins.Collaboration.WebEx.fossils import ICSBookingIndexingFossil, ICSBookingConfModifFossil
 from MaKaC.common.fossilize import fossilizes, fossilize
 from MaKaC.common.externalOperationsManager import ExternalOperationsManager
+
+from MaKaC.plugins.Collaboration.WebEx.mail import WebExParticipantNotification
+from MaKaC.common.mail import GenericMailer
 
 from cgi import escape
 
@@ -91,6 +93,7 @@ class CSBooking(CSBookingBase):
         self._phoneNum = None
         self._phoneNumToll = None
         self._duration = None
+        self._permissionToStart = True
 
         self._created = False
         self._error = False
@@ -142,14 +145,15 @@ class CSBooking(CSBookingBase):
     def setWebExPass(self, webExPass):
         self._webExPass = webExPass
 
-    def setHasAccessPassword(self, value = False):
-        return value
 
     def setAccessPassword(self, accessPassword):
         if accessPassword.strip() == "":
             self._accessPassword = None
         else:
             self._accessPassword = accessPassword
+
+    def setHasAccessPassword(self, value=False):
+        return value
 
     def getHasAccessPassword(self):
         return self._accessPassword is not None
@@ -203,34 +207,34 @@ class CSBooking(CSBookingBase):
         params = self.getBookingParams()
         for participant in self._participants.itervalues():
             if re.match("^.+\\@(\\[?)[a-zA-Z0-9\\-\\.]+\\.([a-zA-Z]{2,3}|[0-9]{1,3})(\\]?)$", participant._email) == None:
-                raise WebExError(errorType = None, userMessage = "Participant email address (" + participant._email + ") for " + participant._firstName + " " + participant._lastName +" is invalid. ")
+                return WebExError(errorType = None, userMessage = "Participant email address (" + participant._email + ") for " + participant._firstName + " " + participant._lastName +" is invalid. ")
 
         if len(params["meetingTitle"].strip()) == 0:
-            raise WebExError(errorType = None, userMessage = _("Title cannot be left blank"))
+            return WebExError(errorType = None, userMessage = _("Title cannot be left blank"))
 
         if len(params["meetingDescription"].strip()) == 0:
-            raise WebExError(errorType = None, userMessage = _("Description cannot be left blank."))
+            return WebExError(errorType = None, userMessage = _("Description cannot be left blank."))
 
         if len(params["webExUser"].strip()) == 0:
-            raise WebExError(errorType = None, userMessage = _("WebEx username is empty.  The booking cannot continue without this."))
+            return WebExError(errorType = None, userMessage = _("WebEx username is empty.  The booking cannot continue without this."))
 
         if len(self.getWebExPass().strip()) == 0:
-            raise WebExError(errorType = None, userMessage = _("WebEx password is empty.  The booking cannot continue without this."))
+            return WebExError(errorType = None, userMessage = _("WebEx password is empty.  The booking cannot continue without this."))
 
         if params["startDate"] > params["endDate"]:
-            raise WebExError(errorType = None, userMessage = _("Start date of booking cannot be after end date.") + str(self._id))
+            return WebExError(errorType = None, userMessage = _("Start date of booking cannot be after end date."))
 
-        allowedStartMinutes = self._WebExOptions["allowedPastMinutes"].getValue()
-        if self.getAdjustedStartDate('UTC')  < (nowutc() - timedelta(minutes = allowedStartMinutes )):
-            raise WebExError(errorType = None, userMessage = _("Cannot create booking before the past %s minutes."))
+#        allowedStartMinutes = self._WebExOptions["allowedPastMinutes"].getValue()
+#        if self.getAdjustedStartDate('UTC')  < (nowutc() - timedelta(minutes = allowedStartMinutes )):
+#            return WebExError(errorType = None, userMessage = "Cannot create booking before the past " + str(allowedStartMinutes) + " minutes.")
 
-        minStartDate = getMinStartDate(self.getConference())
-        if self.getAdjustedStartDate() < minStartDate:
-            raise WebExError(errorType = None, userMessage = _("Cannot create a booking %s minutes before the Indico event's start date."))
+#        minStartDate = getMinStartDate(self.getConference())
+#        if self.getStartDate() < minStartDate:
+#            return WebExError(errorType = None, userMessage = _("Cannot create a booking %s minutes before the Indico event's start date."))
 
-        maxEndDate = getMaxEndDate(self.getConference())
-        if self.getAdjustedEndDate() > maxEndDate:
-            raise WebExError(errorType = None, userMessage = _("Cannot create a booking %s minutes after the Indico event's end date."))
+#        maxEndDate = getMaxEndDate(self.getConference())
+#        if self.getEndDate() > maxEndDate:
+#            return WebExError(errorType = None, userMessage = _("Cannot create a booking %s minutes after the Indico event's end date."))
 
         return False
 
@@ -281,7 +285,6 @@ class CSBooking(CSBookingBase):
         if self._created:
             now = nowutc()
             self._canBeDeleted = True
-#            if self.getStartDate() - timedelta(minutes=self._WebExOptions["allowedMinutes"].getValue()) < now and now < self.getEndDate():
             if self.getStartDate() < now and now < self.getEndDate():
                 self._canBeStarted = True
                 if changeMessage:
@@ -306,30 +309,38 @@ class CSBooking(CSBookingBase):
         result = ExternalOperationsManager.execute(self, "createBooking", WebExOperations.createBooking, self)
         if isinstance(result, WebExError):
             return result
-        self.getLoginURL()
+        #self.getLoginURL()
         #We do this because the call in number is not returned in create response
         self.bookingOK()
         self.checkCanStart()
         self._checkStatus()
+        self.getLoginURL()
+        if params.has_key('sendAttendeesEmail') and params['sendAttendeesEmail'][0].lower() == 'yes':
+            recipients = []
+            for k in self._participants.keys():
+                recipients.append( self._participants[k]._email )
+            if len(recipients)>0:
+                notification = WebExParticipantNotification( self,recipients, 'new' )
+                GenericMailer.send( notification )
         return None
 
     def _modify(self, oldBookingParams):
         """ Modifies a booking in the WebEx server if all conditions are met.
         """
         verboseKeyNames = {
-            "meetingDescription": "Meeting description",
-            "meetingTitle": "Title",
-            "webExUser": "WebEx username",
-            "webExPass": "WebEx password",
-            "meet:meetingPassword": "Meeting password",
-            "participants" : "Participants",
-            "startDate" : "Start date",
-            "endDate" : "End date",
-            "hidden" : "Is hidden",
-            "sendAttendeesEmail" : "Send emails to participants",
-            "notifyOnDateChanges" : "Keep booking synchronized",
-            "accessPassword" : "Meeting password",
-            "session" : "Session"
+            "meetingDescription": _("Meeting description"),
+            "meetingTitle": _("Title"),
+            "webExUser": _("WebEx username"),
+            "webExPass": _("WebEx password"),
+            "meet:meetingPassword": _("Meeting password"),
+            "participants" : _("Participants"),
+            "startDate" : _("Start date"),
+            "endDate" : _("End date"),
+            "hidden" : _("Is hidden"),
+            "sendAttendeesEmail" : _("Send emails to participants"),
+            "notifyOnDateChanges" : _("Keep booking synchronized"),
+            "accessPassword" : _("Meeting password"),
+            "session" : _("Session")
         }
         if self._created:
             self._bookingChangesHistory
@@ -366,7 +377,15 @@ class CSBooking(CSBookingBase):
             result = ExternalOperationsManager.execute(self, "modifyBooking", WebExOperations.modifyBooking, self)
             if isinstance(result, WebExError):
                 return result
+            self._checkStatus()
             self.getLoginURL()
+            if params.has_key('sendAttendeesEmail') and params['sendAttendeesEmail'][0].lower() == 'yes':
+                recipients = []
+                for k in self._participants.keys():
+                    recipients.append( self._participants[k]._email )
+                if len(recipients)>0:
+                    notification = WebExParticipantNotification( self, recipients, 'modify' )
+                    GenericMailer.send( notification )
         else:
             return WebExError( errorType = None, userMessage = _("This video booking could not be found.") )
         return None
@@ -400,18 +419,18 @@ class CSBooking(CSBookingBase):
             status = dom.getElementsByTagName( "serv:result" )[0].firstChild.toxml('utf-8')
             if status == "SUCCESS":
                 self._startURL = dom.getElementsByTagName( "meet:hostMeetingURL" )[0].firstChild.toxml('utf-8')
-                self._permissionToStart = True
             else:
-                return WebExError( errorType = None, userMessage = "There was an error attempting to get the start booking URL from the WebEx server." )
+                return WebExError( errorType = None, userMessage = _("There was an error attempting to get the start booking URL from the WebEx server.") )
+        else:
+            return WebExError( errorType = None, userMessage = _("The booking cannot be started at this time.") )
         return None
 
     def getLoginURL(self):
         """ Starts an WebEx meeting.
             A last check on the WebEx server is performed.
         """
-        if self._canBeStarted:
-            params = self.getBookingParams()
-            request_xml = """<?xml version="1.0\" encoding="UTF-8"?>
+        params = self.getBookingParams()
+        request_xml = """<?xml version="1.0\" encoding="UTF-8"?>
 <serv:message xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:serv=\"http://www.webex.com/schemas/2002/06/service" >
 <header>
   <securityContext>
@@ -429,14 +448,13 @@ class CSBooking(CSBookingBase):
 </body>
 </serv:message>
 """ % ( { "username" : params['webExUser'], "password" : self.getWebExPass(), "siteID" : getWebExOptionValueByName("WESiteID"), "partnerID" : getWebExOptionValueByName("WEPartnerID"), "webExKey":self.getWebExKey(), 'meetingPW':self.getAccessPassword() } )
-            response_xml = sendXMLRequest( request_xml )
-            dom = xml.dom.minidom.parseString( response_xml )
-            status = dom.getElementsByTagName( "serv:result" )[0].firstChild.toxml('utf-8')
-            if status == "SUCCESS":
-                self._url = dom.getElementsByTagName( "meet:joinMeetingURL" )[0].firstChild.toxml('utf-8').replace('&amp;','&')
-                self._permissionToStart = True
-            else:
-                return WebExError( errorType = None, userMessage = _("There was an error attempting to get the join booking URL from the WebEx server.") )
+        response_xml = sendXMLRequest( request_xml )
+        dom = xml.dom.minidom.parseString( response_xml )
+        status = dom.getElementsByTagName( "serv:result" )[0].firstChild.toxml('utf-8')
+        if status == "SUCCESS":
+            self._url = dom.getElementsByTagName( "meet:joinMeetingURL" )[0].firstChild.toxml('utf-8').replace('&amp;','&')
+        else:
+            return WebExError( errorType = None, userMessage = _("There was an error attempting to get the join booking URL from the WebEx server.") )
         return None
 
     def _notifyOnView(self):
@@ -460,6 +478,38 @@ class CSBooking(CSBookingBase):
 
         if not checkDone:
             self.checkCanStart()
+
+    def _delete(self):
+        """
+        This function will delete the specified video booking from the WebEx server
+        """
+        result = ExternalOperationsManager.execute(self, "deleteBooking", WebExOperations.deleteBooking, self)
+        if isinstance(result, WebExError):
+            return result
+        recipients = []
+        for k in self._participants.keys():
+            recipients.append( self._participants[k]._email )
+        if len(recipients)>0:
+            notification = WebExParticipantNotification( self, recipients, 'delete' )
+            GenericMailer.send( notification )
+        self.warning = _("The booking was deleted successfully.")
+
+    def _getLaunchDisplayInfo(self):
+        return {'launchText' : _("Join Now!"),
+                'launchLink' : str(self.getUrl()),
+                'launchTooltip': _("Click here to join the WebEx meeting!")}
+
+    def getCreateModifyArguments(self):
+        arguments = {
+            "meet:meetingkey": self.getWebExKey(),
+            "meet:agenda": escape( self._bookingParams["meetingDescription"].replace("\n","") ),
+            "meet:confName": escape( self._bookingParams["meetingTitle"] ),
+            "meet:hostWebExID": self._bookingParams["webExUser"],
+            "meet:startDate": makeTime( self.getAdjustedStartDate('UTC') ),
+            "meet:duration": self._duration,
+            "meet:meetingPassword": self.getAccessPassword(),
+        }
+        return arguments
 
     def _checkStatus(self):
         if self._created:
@@ -492,41 +542,15 @@ class CSBooking(CSBookingBase):
             self.assignAttributes( response_xml )
         return None
 
-    def _delete(self):
-        """
-        This function will delete the specified video booking from the WebEx server
-        """
-        result = ExternalOperationsManager.execute(self, "deleteBooking", WebExOperations.deleteBooking, self)
-        if isinstance(result, WebExError):
-            return None
-        self.warning = "The booking was deleted successfully."
-
-    def _getLaunchDisplayInfo(self):
-        return {'launchText' : _("Join Now!"),
-                'launchLink' : str(self.getUrl()),
-                'launchTooltip': _("Click here to join the WebEx meeting!")}
-
-    def getCreateModifyArguments(self):
-        arguments = {
-            "meet:meetingkey": self.getWebExKey(),
-            "meet:agenda": escape( self._bookingParams["meetingDescription"].replace("\n","") ),
-            "meet:confName": escape( self._bookingParams["meetingTitle"] ),
-            "meet:hostWebExID": self._bookingParams["webExUser"],
-            "meet:startDate": makeTime( self.getAdjustedStartDate('UTC') ),
-            "meet:duration": self._duration,
-            "meet:meetingPassword": self.getAccessPassword(),
-        }
-        return arguments
-
     def assignAttributes(self, response_xml):
         verboseKeyNames = {
             "meet:meetingkey": "WebEx Meeting ID",
-            "meet:agenda": "Meeting description",
-            "meet:confName": "Title",
-            "meet:hostWebExID": "WebEx host account",
-            "meet:startDate": "Start time",
-            "meet:duration": "Duration",
-            "meet:meetingPassword": "Meeting password",
+            "meet:agenda": _("Meeting description"),
+            "meet:confName": _("Title"),
+            "meet:hostWebExID": _("WebEx host account"),
+            "meet:startDate": _("Start time"),
+            "meet:duration": _("Duration"),
+            "meet:meetingPassword": _("Meeting password"),
         }
 
         dom = xml.dom.minidom.parseString( response_xml )
@@ -545,7 +569,7 @@ class CSBooking(CSBookingBase):
                 if key == "meet:duration":
                     if dom.getElementsByTagName( key )[0].firstChild.toxml('utf-8') != str(self._duration):
                         time_discrepancy = True
-                        user_msg = "Updated booking duration from " + str(self._duration) + " minutes to " + str( dom.getElementsByTagName( key )[0].firstChild.toxml('utf-8') + " minutes")
+                        user_msg = _("Updated booking duration from ") + str(self._duration) + _(" minutes to ") + str( dom.getElementsByTagName( key )[0].firstChild.toxml('utf-8') + _(" minutes"))
                         self._duration = int( dom.getElementsByTagName( key )[0].firstChild.toxml('utf-8') )
                 continue
             try:
@@ -575,17 +599,18 @@ class CSBooking(CSBookingBase):
             if time_discrepancy == True:
                 if self._startDate != getAdjustedDate(WE_time, tz=self._conf.getTimezone()):
                     self._startDate = getAdjustedDate(WE_time, tz=self._conf.getTimezone())
-                    changesFromWebEx.append("Updated start time to match WebEx entry")
+                    changesFromWebEx.append(_("Updated start time to match WebEx entry"))
                 if self._endDate != getAdjustedDate(WE_time, tz=self._conf.getTimezone()) + timedelta( minutes=int( self._duration ) ):
                     self._endDate = getAdjustedDate(WE_time, tz=self._conf.getTimezone()) + timedelta( minutes=int( self._duration ) )
-                    changesFromWebEx.append("Updated end time to match WebEx entry")
+                    changesFromWebEx.append(_("Updated end time to match WebEx entry"))
         self.checkCanStart()
         self._bookingChangesHistory = changesFromWebEx
+
     def _sendMail(self, operation):
         """
         Overloading the _sendMail behavior for WebEx
         """
-
+        Logger.get('WebEx').info("Send Mail Operation: %s" % operation )
         if operation == 'new':
             try:
                 notification = NewWebExMeetingNotificationAdmin(self)

@@ -109,6 +109,7 @@ class XMLGenerator(object):
     @classmethod
     def getCustomBookingXML(cls, booking, displayTz, out):
         booking.checkCanStart()
+        params = booking.getBookingParams()
         if (booking.canBeStarted()):
             out.openTag("launchInfo")
             out.writeTag("launchText", _("Join Now!"))
@@ -124,12 +125,12 @@ class XMLGenerator(object):
             out.closeTag("section")
         out.openTag("section")
         out.writeTag("title", _('Title:'))
-        out.writeTag("line", booking._bookingParams["meetingTitle"])
+        out.writeTag("line", params["meetingTitle"])
         out.closeTag("section")
 
         out.openTag("section")
         out.writeTag("title", _('Agenda:'))
-        out.writeTag("line", booking._bookingParams["meetingDescription"])
+        out.writeTag("line", params["meetingDescription"])
         out.closeTag("section")
         out.openTag("section")
         out.writeTag("title", _('Join URL:'))
@@ -140,11 +141,11 @@ class XMLGenerator(object):
         out.closeTag("section")
         out.openTag("section")
         out.writeTag("title", _('Toll free call-in number (US/Canada):'))
-        out.writeTag("line", booking._phoneNum)
+        out.writeTag("line", booking.getPhoneNum())
         out.closeTag("section")
         out.openTag("section")
         out.writeTag("title", _('Toll call-in number: (US/Canada)'))
-        out.writeTag("line", booking._phoneNumToll)
+        out.writeTag("line", booking.getPhoneNumToll())
         out.closeTag("section")
         out.openTag("section")
         out.writeTag("title", _('Call-in access code:'))

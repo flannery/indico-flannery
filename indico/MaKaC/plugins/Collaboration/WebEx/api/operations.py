@@ -30,11 +30,9 @@ import xml.dom.minidom
 from datetime import datetime
 from time import strptime
 from MaKaC.common.logger import Logger
-from MaKaC.plugins.Collaboration.WebEx.common import WebExControlledException, \
-    WebExError, WebExWarning, getWebExOptionValueByName,\
+from MaKaC.plugins.Collaboration.WebEx.common import  WebExError,\
+    WebExWarning, getWebExOptionValueByName,\
     makeParticipantXML, sendXMLRequest
-from MaKaC.plugins.Collaboration.WebEx.mail import WebExParticipantNotification
-from MaKaC.common.mail import GenericMailer
 from cgi import escape
 
 class WebExOperations(object):
@@ -96,15 +94,6 @@ class WebExOperations(object):
         status = dom.getElementsByTagName( "serv:result" )[0].firstChild.toxml('utf-8')
         if status == "SUCCESS":
             booking.setWebExKey( dom.getElementsByTagName( "meet:meetingkey" )[0].firstChild.toxml('utf-8') )
-            booking._checkStatus()
-
-            if params.has_key('sendAttendeesEmail') and params['sendAttendeesEmail'][0].lower() == 'yes':
-                recipients = []
-                for k in booking._participants.keys():
-                    recipients.append( booking._participants[k]._email )
-                if len(recipients)>0:
-                    notification = WebExParticipantNotification( booking, recipients, 'new' )
-                    GenericMailer.send( notification )
         else:
             booking._url = ""
             errorID = dom.getElementsByTagName( "serv:exceptionID" )[0].firstChild.toxml('utf-8')
@@ -169,17 +158,6 @@ class WebExOperations(object):
             errorID = dom.getElementsByTagName( "serv:exceptionID" )[0].firstChild.toxml('utf-8')
             errorReason = dom.getElementsByTagName( "serv:reason" )[0].firstChild.toxml('utf-8')
             return WebExError( errorID, userMessage = errorReason )
-
-        booking.bookingOK()
-        booking.checkCanStart()
-        booking._checkStatus()
-        if params.has_key('sendAttendeesEmail') and params['sendAttendeesEmail'][0].lower() == 'yes':
-            recipients = []
-            for k in booking._participants.keys():
-                recipients.append( booking._participants[k]._email )
-            if len(recipients)>0:
-                notification = WebExParticipantNotification( booking, recipients, 'modify' )
-                GenericMailer.send( notification )
         return None
 
     @classmethod
@@ -210,18 +188,5 @@ class WebExOperations(object):
             errorReason = dom.getElementsByTagName( "serv:reason" )[0].firstChild.toxml('utf-8')
             booking._warning = WebExWarning( "WebEx error reported: %s" % errorReason )
             return WebExError( errorID, userMessage = errorReason )
-
-        if booking._created:
-            try:
-                recipients = []
-                for k in booking._participants.keys():
-                    recipients.append( booking._participants[k]._email )
-                if len(recipients)>0:
-                    notification = WebExParticipantNotification( booking, recipients, 'delete' )
-                    GenericMailer.send( notification )
-            except Exception, e:
-                Logger.get('WebEx').error(
-                    """Could not send notification emails for booking with id %s of event with id %s, exception: %s""" %
-                    (booking.getId(), booking.getConference().getId(), str(e)))
         return None
 

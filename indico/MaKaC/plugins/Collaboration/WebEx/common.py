@@ -112,6 +112,8 @@ class WebExError(CSErrorBase):
         if self._errorID == "000000":
             self._errorType = "webex_server_error"
             self._userMessage = _("Unknown error with WebEx server.")
+        elif self._errorID == "019011":
+            self._errorType = "webex_invalid_pass_characters"  #The message from WebEx is descriptive
         elif self._errorID == "030001" or self._errorID == "030006":
             self._errorType = "webex_invalid_user"
             self._userMessage = _("This WebEx server does not recognize the user ID provided.")
@@ -236,13 +238,6 @@ class ChangesFromWebExError(WebExError):
 
     def getChanges(self):
         return self._changes
-
-class WebExControlledException(Exception):
-    def __init__(self, message):
-        self.message = message
-
-    def __str__(self):
-        return "WebExControlledException. Message = " + self.message
 
 class WebExWarning(Fossilizable):
     fossilizes(IWebExWarningFossil)

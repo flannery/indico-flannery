@@ -19,9 +19,9 @@
 ## along with CDS Indico; if not, write to the Free Software Foundation, Inc.,
 ## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 from MaKaC.webinterface.mail import GenericNotification
+from MaKaC.plugins.Collaboration.collaborationTools import MailTools
 
 from MaKaC.common.info import HelperMaKaCInfo
-from MaKaC.plugins.Collaboration.collaborationTools import MailTools
 from MaKaC.common.utils import formatDateTime
 from MaKaC.plugins.Collaboration.WebEx.common import getWebExOptionValueByName
 
@@ -73,10 +73,26 @@ Request details:<br />
     </tr>
     <tr>
         <td style="vertical-align: top; white-space : nowrap;">
+            <strong>Auto-join URL:</strong>
+        </td>
+        <td style="vertical-align: top">
+            <a href="%(url)s" target="_blank">%(url)s</a>
+        </td>
+    </tr>
+    <tr>
+        <td style="vertical-align: top; white-space : nowrap;">
             <strong>Meeting description:</strong>
         </td>
         <td style="vertical-align: top;">
             %(description)s
+        </td>
+    </tr>
+    <tr>
+        <td style="vertical-align: top; white-space : nowrap;">
+            <strong>Time zone:</strong>
+        </td>
+        <td style="vertical-align: top">
+            %(timezone)s
         </td>
     </tr>
     <tr>
@@ -97,7 +113,7 @@ Request details:<br />
     </tr>
     <tr>
         <td style="vertical-align: top; white-space : nowrap;">
-            <strong>Access password yes/no:</strong>
+            <strong>Access password:</strong>
         </td>
         <td style="vertical-align: top">
             %(password)s
@@ -105,10 +121,10 @@ Request details:<br />
     </tr>
     <tr>
         <td style="vertical-align: top; white-space : nowrap;">
-            <strong>Auto-join URL:</strong>
+            <strong>Call-in phone number (Toll Free):</strong>
         </td>
         <td style="vertical-align: top">
-            %(url)s
+            %(phone)s
         </td>
     </tr>
     <tr>
@@ -116,7 +132,7 @@ Request details:<br />
             <strong>Call-in phone number:</strong>
         </td>
         <td style="vertical-align: top">
-            %(phone)s
+            %(phoneToll)s
         </td>
     </tr>
 </table>
@@ -127,9 +143,11 @@ Request details:<br />
      "description":bp["meetingDescription"],
      "start_date":formatDateTime(self._booking.getAdjustedStartDate()),
      "end_date":formatDateTime(self._booking.getAdjustedEndDate()),
-     "password":self._getHasAccessPassword(),
-     "url":self._booking._url,
-     "phone":self._booking._phoneNum
+     "password":self._booking.getAccessPassword(),
+     "url":self._booking.getUrl(),
+     "phone":self._booking.getPhoneNum(), 
+     "phoneToll":self._booking.getPhoneNumToll(), 
+     "timezone":self._booking._conf.getTimezone()
        }
      )
 
@@ -137,21 +155,6 @@ Request details:<br />
     def listToStr(cls, list):
         return "<br />".join([("•" + item) for item in list])
 
-    def _getHasAccessPassword(self):
-        if self._booking.getHasAccessPassword():
-            return 'Yes'
-        else:
-            return 'No'
-
-    def _getAutoJoinURL(self, typeOfMail):
-        if typeOfMail == "remove":
-            return "(booking deleted)"
-        else:
-            url = self._booking.getURL()
-            if url:
-                return url
-            else:
-                return "No auto-join url. Maybe the WebEx booking is invalid"
 class WebExParticipantNotification(WebExNotificationBase):
     def __init__(self, booking, emailList, typeOfMail, changes=None):
         WebExNotificationBase.__init__(self, booking)
