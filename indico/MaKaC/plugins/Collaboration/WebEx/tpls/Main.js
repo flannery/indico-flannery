@@ -20,6 +20,9 @@
                 var startDate = IndicoUtil.parseDateTime(startDateString);
 
                 //check start date is not in the past
+                if (beforeNow(startDate)) {
+                    errors.push($T("Start date cannot be before the current time"));
+                }
                 var startDatePlusExtraTime = new Date();
                 startDatePlusExtraTime.setTime(startDate.getTime() + <%= AllowedStartMinutes %> *60*1000);
                 if (beforeNow(startDatePlusExtraTime)) {
@@ -256,16 +259,22 @@
     },
 
     postCreate: function(booking) {
-
+        if (booking.warning) {
+            var popup = new AlertPopup("Booking creation message", Html.span({},booking.warning, Html.br(), booking.message ));
+                popup.open();
+        }
     },
 
     postEdit: function(booking) {
-
+        if (booking.warning) {
+            var popup = new AlertPopup("Booking modification message", Html.span({},booking.warning, Html.br(), booking.message ));
+                popup.open();
+        }
     },
 
     postDelete: function(booking) {
         if (booking.warning) {
-            var popup = new AlertPopup("Booking deletion", Html.span({},booking.warning.message, Html.br(), booking.message ));
+            var popup = new AlertPopup("Booking deletion message", Html.span({},booking.warning, Html.br(), booking.message ));
                 popup.open();
         }
     }

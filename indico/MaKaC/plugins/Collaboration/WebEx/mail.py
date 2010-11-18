@@ -24,7 +24,7 @@ from MaKaC.plugins.Collaboration.collaborationTools import MailTools
 from MaKaC.common.info import HelperMaKaCInfo
 from MaKaC.common.utils import formatDateTime
 from MaKaC.plugins.Collaboration.WebEx.common import getWebExOptionValueByName
-
+import re
 
 class WebExNotificationBase(GenericNotification):
     """ Base class to build an email notification for the Recording request plugin.
@@ -47,22 +47,6 @@ class WebExNotificationBase(GenericNotification):
         return """
 Request details:<br />
 <table style="border-spacing: 10px 10px;">
-    <tr>
-        <td style="vertical-align: top; white-space : nowrap;">
-            <strong>Booking id:</strong>
-        </td>
-        <td style="vertical-align: top;">
-            %(id)s
-        </td>
-    </tr>
-    <tr>
-        <td style="vertical-align: top; white-space : nowrap;">
-            <strong>Creation date:</strong>
-        </td>
-        <td style="vertical-align: top;">
-            %(creation_date)s
-        </td>
-    </tr>
     <tr>
         <td style="vertical-align: top; white-space : nowrap;">
             <strong>Meeting title:</strong>
@@ -89,18 +73,10 @@ Request details:<br />
     </tr>
     <tr>
         <td style="vertical-align: top; white-space : nowrap;">
-            <strong>Time zone:</strong>
-        </td>
-        <td style="vertical-align: top">
-            %(timezone)s
-        </td>
-    </tr>
-    <tr>
-        <td style="vertical-align: top; white-space : nowrap;">
             <strong>Start date:</strong>
         </td>
         <td style="vertical-align: top">
-            %(start_date)s
+            %(start_date)s &nbsp;&nbsp;&nbsp;%(timezone)s
         </td>
     </tr>
     <tr>
@@ -108,7 +84,7 @@ Request details:<br />
             <strong>End date:</strong>
         </td>
         <td style="vertical-align: top">
-            %(end_date)s
+            %(end_date)s &nbsp;&nbsp;&nbsp;%(timezone)s
         </td>
     </tr>
     <tr>
@@ -120,8 +96,13 @@ Request details:<br />
         </td>
     </tr>
     <tr>
+        <td style="vertical-align: top; white-space : nowrap;" colspan="2">
+            <strong>To receive a call back, provide your phone number when you join the meeting, or call the number below and enter the access code. </strong>
+        </td>
+    </tr>
+    <tr>
         <td style="vertical-align: top; white-space : nowrap;">
-            <strong>Call-in phone number (Toll Free):</strong>
+            <strong>Toll-free Call-in phone number:</strong>
         </td>
         <td style="vertical-align: top">
             %(phone)s
@@ -129,24 +110,30 @@ Request details:<br />
     </tr>
     <tr>
         <td style="vertical-align: top; white-space : nowrap;">
-            <strong>Call-in phone number:</strong>
+            <strong>Global Call-in phone number:</strong>
         </td>
         <td style="vertical-align: top">
             %(phoneToll)s
         </td>
     </tr>
+    <tr>
+        <td style="vertical-align: top; white-space : nowrap;">
+            <strong>Phone access code:</strong>
+        </td>
+        <td style="vertical-align: top">
+            %(phoneAccessCode)s
+        </td>
+    </tr>
 </table>
-"""%({ "id":self._booking.getId(),
-     "creation_date": MailTools.bookingCreationDate(self._booking),
-#     "modification_date":MailTools.bookingModificationDate(self._booking, typeOfMail),
-     "title":bp["meetingTitle"],
+"""%({ "title":bp["meetingTitle"],
      "description":bp["meetingDescription"],
      "start_date":formatDateTime(self._booking.getAdjustedStartDate()),
      "end_date":formatDateTime(self._booking.getAdjustedEndDate()),
      "password":self._booking.getAccessPassword(),
      "url":self._booking.getUrl(),
      "phone":self._booking.getPhoneNum(), 
-     "phoneToll":self._booking.getPhoneNumToll(), 
+     "phoneToll":self._booking.getPhoneNumToll(),
+     "phoneAccessCode":re.sub(r'(\d{3})(?=\d)',r'\1 ', str(self._booking.getWebExKey())[::-1])[::-1],
      "timezone":self._booking._conf.getTimezone()
        }
      )

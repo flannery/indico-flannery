@@ -78,6 +78,7 @@ class CSBooking(CSBookingBase):
             "meetingDescription": (str, None),
             "webExUser":(str, None),
             "sendAttendeesEmail":(bool, True),
+            "sendCreatorEmail":(bool, True),
             "session": (str,"")
     }
     _complexParameters = ["accessPassword", "hasAccessPassword", "participants", "webExPass" ]
@@ -306,7 +307,13 @@ class CSBooking(CSBookingBase):
         params = self.getBookingParams()
         self.setAccessPassword( params['accessPassword'] )
         self._duration = findDuration( self.getAdjustedStartDate('UTC'), self.getAdjustedEndDate('UTC') )
-        result = ExternalOperationsManager.execute(self, "createBooking", WebExOperations.createBooking, self)
+        try:
+            result = ExternalOperationsManager.execute(self, "createBooking", WebExOperations.createBooking, self)
+        except Exception,e:
+            Logger.get('WebEx').error(
+                """Could not create booking with id %s of event with id %s, exception: %s""" %
+                (self.getId(), self.getConference().getId(), str(e)))
+            return WebExError( errorType = None, userMessage = _("""There was an error communicating with the WebEx server.  The request was unsuccessful.  Error information: %s""" % str(e)) )
         if isinstance(result, WebExError):
             return result
         #self.getLoginURL()
@@ -315,13 +322,7 @@ class CSBooking(CSBookingBase):
         self.checkCanStart()
         self._checkStatus()
         self.getLoginURL()
-        if params.has_key('sendAttendeesEmail') and params['sendAttendeesEmail'][0].lower() == 'yes':
-            recipients = []
-            for k in self._participants.keys():
-                recipients.append( self._participants[k]._email )
-            if len(recipients)>0:
-                notification = WebExParticipantNotification( self,recipients, 'new' )
-                GenericMailer.send( notification )
+        self.sendParticipantsEmail('new')
         return None
 
     def _modify(self, oldBookingParams):
@@ -338,15 +339,17 @@ class CSBooking(CSBookingBase):
             "endDate" : _("End date"),
             "hidden" : _("Is hidden"),
             "sendAttendeesEmail" : _("Send emails to participants"),
+            "sendCreatorEmail" : _("Send emails to creator"),
             "notifyOnDateChanges" : _("Keep booking synchronized"),
             "accessPassword" : _("Meeting password"),
             "session" : _("Session")
         }
+        self._warning = None
         if self._created:
             self._bookingChangesHistory
             params = self.getBookingParams()
             # Create entries for the keys that aren't always present
-            hidden_keys = ["hidden", "notifyOnDateChanges", "sendAttendeesEmail"]
+            hidden_keys = ["hidden", "notifyOnDateChanges", "sendAttendeesEmail", "sendCreatorEmail"]
             for key in hidden_keys:
                 if not params.has_key( key ):
                     params[key] = "no"
@@ -374,21 +377,38 @@ class CSBooking(CSBookingBase):
                                         break
                         else:
                             self._bookingChangesHistory.append( _("""%s _("has changed"): %s""") % ( verboseKeyNames[key], params[key] ) )
-            result = ExternalOperationsManager.execute(self, "modifyBooking", WebExOperations.modifyBooking, self)
-            if isinstance(result, WebExError):
-                return result
+            try:
+                result = ExternalOperationsManager.execute(self, "modifyBooking", WebExOperations.modifyBooking, self)
+                if isinstance(result, WebExError):
+                    return result
+            except Exception,e:
+                Logger.get('WebEx').error(
+                    """Could not modify booking with id %s of event with id %s, exception: %s""" %
+                    (self.getId(), self.getConference().getId(), str(e)))
+                return WebExError( errorType = None, userMessage = _("""There was an error communicating with the WebEx server.  The request was unsuccessful.  Error information: %s""" % str(e)) )
             self._checkStatus()
             self.getLoginURL()
-            if params.has_key('sendAttendeesEmail') and params['sendAttendeesEmail'][0].lower() == 'yes':
-                recipients = []
-                for k in self._participants.keys():
-                    recipients.append( self._participants[k]._email )
-                if len(recipients)>0:
-                    notification = WebExParticipantNotification( self, recipients, 'modify' )
-                    GenericMailer.send( notification )
+            self.sendParticipantsEmail('modify')
         else:
             return WebExError( errorType = None, userMessage = _("This video booking could not be found.") )
         return None
+
+    def _delete(self):
+        """
+        This function will delete the specified video booking from the WebEx server
+        """
+        try: 
+            result = ExternalOperationsManager.execute(self, "deleteBooking", WebExOperations.deleteBooking, self)
+            if isinstance(result, WebExError):
+                return result
+        except Exception,e:
+            Logger.get('WebEx').error(
+                """Could not delete booking with id %s of event with id %s, exception: %s""" %
+                (self.getId(), self.getConference().getId(), str(e)))
+            return WebExError( errorType = None, userMessage = _("""There was an error communicating with the WebEx server.  The request was unsuccessful.  Error information: %s""" % str(e)) )
+        self.sendParticipantsEmail('delete')
+        self._warning = _("The booking was deleted successfully.")
+
 
     def _start(self):
         """ Starts an WebEx meeting.
@@ -414,7 +434,13 @@ class CSBooking(CSBookingBase):
 </body>
 </serv:message>
 """ % ( { "username" : params['webExUser'], "password" : self.getWebExPass(), "siteID" : getWebExOptionValueByName("WESiteID"), "partnerID" : getWebExOptionValueByName("WEPartnerID"), "webExKey":self.getWebExKey() } )
-            response_xml = sendXMLRequest( request_xml )
+            try:
+                response_xml = sendXMLRequest( request_xml )
+            except Exception,e:
+                Logger.get('WebEx').error(
+                    """Could not start booking with id %s of event with id %s, exception: %s""" %
+                    (self.getId(), self.getConference().getId(), str(e)))
+                self._warning = _("There was an error in sending the emails to administrators: %s" % str(e) )
             dom = xml.dom.minidom.parseString( response_xml )
             status = dom.getElementsByTagName( "serv:result" )[0].firstChild.toxml('utf-8')
             if status == "SUCCESS":
@@ -478,21 +504,6 @@ class CSBooking(CSBookingBase):
 
         if not checkDone:
             self.checkCanStart()
-
-    def _delete(self):
-        """
-        This function will delete the specified video booking from the WebEx server
-        """
-        result = ExternalOperationsManager.execute(self, "deleteBooking", WebExOperations.deleteBooking, self)
-        if isinstance(result, WebExError):
-            return result
-        recipients = []
-        for k in self._participants.keys():
-            recipients.append( self._participants[k]._email )
-        if len(recipients)>0:
-            notification = WebExParticipantNotification( self, recipients, 'delete' )
-            GenericMailer.send( notification )
-        self.warning = _("The booking was deleted successfully.")
 
     def _getLaunchDisplayInfo(self):
         return {'launchText' : _("Join Now!"),
@@ -606,11 +617,31 @@ class CSBooking(CSBookingBase):
         self.checkCanStart()
         self._bookingChangesHistory = changesFromWebEx
 
+    def sendParticipantsEmail(self, operation):
+        params = self.getBookingParams()
+        try:
+            if params.has_key('sendAttendeesEmail') and params['sendAttendeesEmail'][0].lower() == 'yes':
+                recipients = []
+                for k in self._participants.keys():
+                    recipients.append( self._participants[k]._email )
+                if len(recipients)>0:
+                    notification = WebExParticipantNotification( self,recipients, operation )
+                    GenericMailer.send( notification )
+            if params.has_key('sendCreatorEmail') and params['sendCreatorEmail'][0].lower() == 'yes':
+                recipients = [self._booking.getOwnerObject().getEmail()]
+                notification = WebExParticipantNotification( self,recipients, operation )
+                GenericMailer.send( notification )
+        except Exception,e:
+            Logger.get('WebEx').error(
+                """Could not send participant email for booking with id %s of event with id %s, operation %s, exception: %s""" %
+                (self.getId(), self.getConference().getId(), operation, str(e)))
+            self._warning = _("The operation appears to have been successful, however there was an error in sending the emails to participants: %s" % str(e) )
+
     def _sendMail(self, operation):
         """
         Overloading the _sendMail behavior for WebEx
         """
-        Logger.get('WebEx').info("Send Mail Operation: %s" % operation )
+        return WebExError(errorType = None, userMessage = _("Error in sending the emails."))
         if operation == 'new':
             try:
                 notification = NewWebExMeetingNotificationAdmin(self)
@@ -621,6 +652,7 @@ class CSBooking(CSBookingBase):
                 Logger.get('WebEx').error(
                     """Could not send NewWebExMeetingNotificationAdmin for booking with id %s of event with id %s, exception: %s""" %
                     (self.getId(), self.getConference().getId(), str(e)))
+                self._warning = _("There was an error in sending the emails to administrators: %s" % str(e) )
 
         elif operation == 'modify':
             try:
@@ -630,8 +662,9 @@ class CSBooking(CSBookingBase):
                                          self.getConference().getCreator())
             except Exception,e:
                 Logger.get('WebEx').error(
-                    """Could not send WebExMeetingModifiedNotificationAdmin for booking with id %s of event with id %s, exception: %s""" %
+                    """Could not send WebExMeetingModifiedNotification for booking with id %s of event with id %s, exception: %s""" %
                     (self.getId(), self.getConference().getId(), str(e)))
+                self._warning = _("There was an error in sending the emails to administrators: %s" % str(e) )
 
         elif operation == 'remove':
             try:
@@ -641,6 +674,7 @@ class CSBooking(CSBookingBase):
                                          self.getConference().getCreator())
             except Exception,e:
                 Logger.get('WebEx').error(
-                    """Could not send WebExMeetingRemovalNotificationAdmin for booking with id %s of event with id %s, exception: %s""" %
+                    """Could not send WebExMeetingRemovalNotification for booking with id %s of event with id %s, exception: %s""" %
                     (self.getId(), self.getConference().getId(), str(e)))
+                self._warning = _("There was an error in sending the emails to administrators: %s" % str(e) )
 

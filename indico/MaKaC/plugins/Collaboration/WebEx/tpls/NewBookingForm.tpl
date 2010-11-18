@@ -94,5 +94,13 @@
             <input id="sendAttendeesEmail" type="checkbox" size="16" name="sendAttendeesEmail" value="yes" checked />
         </td>
     </tr>
+    <tr>
+        <td class="bookingFormFieldName">
+            <span>Send email to event creator?</span>
+        </td>
+        <td>
+            <input id="sendCreatorEmail" type="checkbox" size="16" name="sendCreatorEmail" value="yes" checked />
+        </td>
+    </tr>
 
 </table>
