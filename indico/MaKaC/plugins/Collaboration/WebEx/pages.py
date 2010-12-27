@@ -20,6 +20,7 @@
 ## 59 Temple Place, Suite 330, Boston, MA 02111-1307, USA.
 
 from MaKaC.plugins.Collaboration.base import WCSPageTemplateBase, WJSBase
+from MaKaC.webinterface.pages.collaboration import WAdvancedTabBase
 from MaKaC.common.utils import formatDateTime
 from MaKaC.webinterface.common.tools import strip_ml_tags, unescape_html
 from MaKaC.plugins.Collaboration.WebEx.common import getMinStartDate,\
@@ -31,7 +32,6 @@ class WNewBookingForm(WCSPageTemplateBase):
 
     def getVars(self):
         vars = WCSPageTemplateBase.getVars( self )
-
         vars["EventTitle"] = self._conf.getTitle()
         vars["EventDescription"] = unescape_html(strip_ml_tags( self._conf.getDescription())).strip()
 
@@ -52,6 +52,16 @@ class WNewBookingForm(WCSPageTemplateBase):
 
         return vars
 
+class WAdvancedTab(WAdvancedTabBase):
+
+    def getVars(self):
+        variables = WAdvancedTabBase.getVars(self)
+#        if booking.showAccessPassword():
+#            variables["showAccessPassword"] = "yes"
+#        else:
+#            variables["showAccessPassword"] = "no"
+        return variables
+
 class WMain (WJSBase):
 
     def getVars(self):
@@ -61,6 +71,9 @@ class WMain (WJSBase):
         vars["MinStartDate"] = formatDateTime(getMinStartDate(self._conf))
         vars["MaxEndDate"] = formatDateTime(getMaxEndDate(self._conf))
         vars["AllowedMarginMinutes"] = self._WebExOptions["allowedMinutes"].getValue()
+#        from MaKaC.common.logger import Logger
+        vars["LoggedInEmail"] = self._user.getEmail()
+#        Logger.get('WebEx').error(self._user.getEmail())
         return vars
 
 class WExtra (WJSBase):
@@ -71,6 +84,7 @@ class WExtra (WJSBase):
         vars["MinStartDate"] = ''
         vars["MaxEndDate"] = ''
         vars["AllowedStartMinutes"] = self._WebExOptions["allowedPastMinutes"].getValue()
+        vars["LoggedInEmail"] = self._user.getEmail()
         sessionTimes = ""
         if not hasattr(self, "_conf") or self._conf == None:
             return vars
@@ -108,6 +122,10 @@ class XMLGenerator(object):
 
     @classmethod
     def getCustomBookingXML(cls, booking, displayTz, out):
+#        from MaKaC.common.logger import Logger
+#        from MaKaC.user import AvatarHolder
+#        for av in AvatarHolder().
+#        Logger.get('WebEx').error(booking._conf.getCreator().getEmail())
         booking.checkCanStart()
         params = booking.getBookingParams()
         if (booking.canBeStarted()):
@@ -117,21 +135,24 @@ class XMLGenerator(object):
             out.writeTag("launchTooltip", _('Click here to join the WebEx meeting!'))
             out.closeTag("launchInfo")
         out.openTag("information")
-
+        out.openTag("section")
+        out.writeTag("title", _('Title:'))
+        out.writeTag("line", params["meetingTitle"])
+        out.closeTag("section")
+        out.openTag("section")
+        out.writeTag("title", _('Agenda:'))
+        out.writeTag("line", params["meetingDescription"])
+        out.closeTag("section")
         if booking.getHasAccessPassword():
             out.openTag("section")
             out.writeTag("title", _('Protection:'))
             out.writeTag("line", _('This WebEx meeting is protected by a password'))
             out.closeTag("section")
-        out.openTag("section")
-        out.writeTag("title", _('Title:'))
-        out.writeTag("line", params["meetingTitle"])
-        out.closeTag("section")
-
-        out.openTag("section")
-        out.writeTag("title", _('Agenda:'))
-        out.writeTag("line", params["meetingDescription"])
-        out.closeTag("section")
+            if booking.showAccessPassword():
+                out.openTag("section")
+                out.writeTag("title", _('Meeting access password :'))
+                out.writeTag("line", booking.getAccessPassword())
+                out.closeTag("section")
         out.openTag("section")
         out.writeTag("title", _('Join URL:'))
         out.openTag("linkLineNewWindow")
@@ -140,15 +161,15 @@ class XMLGenerator(object):
         out.closeTag("linkLineNewWindow")
         out.closeTag("section")
         out.openTag("section")
-        out.writeTag("title", _('Toll free call-in number (US/Canada):'))
+        out.writeTag("title", _('Call-in toll free number (US/Canada):'))
         out.writeTag("line", booking.getPhoneNum())
         out.closeTag("section")
         out.openTag("section")
-        out.writeTag("title", _('Toll call-in number: (US/Canada)'))
+        out.writeTag("title", _('Call-in toll number: (US/Canada)'))
         out.writeTag("line", booking.getPhoneNumToll())
         out.closeTag("section")
         out.openTag("section")
-        out.writeTag("title", _('Call-in access code:'))
+        out.writeTag("title", _('Access code:'))
         out.writeTag("line", re.sub(r'(\d{3})(?=\d)',r'\1 ', str(booking._webExKey)[::-1])[::-1])
         out.closeTag("section")
         out.closeTag("information")

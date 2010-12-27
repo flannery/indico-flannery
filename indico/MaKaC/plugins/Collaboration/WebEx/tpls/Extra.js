@@ -108,6 +108,58 @@ var WebExMeetingPasswordHelpPopup = function(event) {
         '<\/div>');
 };
 
+
+/**
+ * Mouseover help popup for the 'Show access password' field
+ */
+var showAccessPasswordHelp = function(event) {
+    IndicoUI.Widgets.Generic.tooltip(this, event,
+        '<div style="padding:3px; width:250px;">' +
+            $T('Leave checked to show the meeting access password on the event display page.<br/><b>IMPORTANT: Any person viewing the event page will see this password</b>') +
+        '<\/div>');
+};
+
+/**
+ * Mouseover help popup for the 'Show access password' field
+ */
+var seeParticipantsHelp = function(event) {
+    IndicoUI.Widgets.Generic.tooltip(this, event,
+        '<div style="padding:3px; width:250px;">' +
+            $T('Leave checked if participants will be able to see a list of the users participating in the meeting.<br/>') +
+        '<\/div>');
+};
+
+/**
+ * Mouseover help popup for the 'Show access password' field
+ */
+var enableChatHelp = function(event) {
+    IndicoUI.Widgets.Generic.tooltip(this, event,
+        '<div style="padding:3px; width:250px;">' +
+            $T('Leave checked to allow users to send private messages to each other outside of the main room chat.') +
+        '<\/div>');
+};
+
+/**
+ * Mouseover help popup for the 'Show access password' field
+ */
+var joinBeforeHostHelp = function(event) {
+    IndicoUI.Widgets.Generic.tooltip(this, event,
+        '<div style="padding:3px; width:250px;">' +
+            $T('Leave checked to allow participants to join before the host has connected') +
+        '<\/div>');
+};
+
+/**
+ * Mouseover help popup for the 'Show access password' field
+ */
+var joinBeforeTimeHelp = function(event) {
+    IndicoUI.Widgets.Generic.tooltip(this, event,
+        '<div style="padding:3px; width:250px;">' +
+            $T('Select the amount of time in minutes that participants will be able to connect to the meeting before the chosen start time') +
+        '<\/div>');
+};
+
+
 /**
  * Draws the context help icons and assigns the appropiate popups to each one.
  */
@@ -127,11 +179,32 @@ var WebExDrawContextHelpIcons = function() {
     var passwordHelpImg = Html.img({src: imageSrc("help"), style: {marginLeft: '5px', verticalAlign: 'middle'}});
     passwordHelpImg.dom.onmouseover = WebExMeetingPasswordHelpPopup;
 
+    var showAccessPasswordHelpImg = Html.img({src: imageSrc("help"), style: {marginLeft: '5px', verticalAlign: 'middle'}});
+    showAccessPasswordHelpImg.dom.onmouseover = showAccessPasswordHelp;
+
+    var seeParticipantsHelpImg = Html.img({src: imageSrc("help"), style: {marginLeft: '5px', verticalAlign: 'middle'}});
+    seeParticipantsHelpImg.dom.onmouseover = seeParticipantsHelp;
+
+    var enableChatHelpImg = Html.img({src: imageSrc("help"), style: {marginLeft: '5px', verticalAlign: 'middle'}});
+    enableChatHelpImg.dom.onmouseover = enableChatHelp;
+
+    var joinBeforeHostHelpImg = Html.img({src: imageSrc("help"), style: {marginLeft: '5px', verticalAlign: 'middle'}});
+    joinBeforeHostHelpImg.dom.onmouseover = joinBeforeHostHelp;
+
+    var joinBeforeTimeHelpImg = Html.img({src: imageSrc("help"), style: {marginLeft: '5px', verticalAlign: 'middle'}});
+    joinBeforeTimeHelpImg.dom.onmouseover = joinBeforeTimeHelp;
+
     $E('startDateHelp').set(startDateHelpImg);
     $E('endDateHelp').set(endDateHelpImg);
     $E('WebExUsernameHelp').set(WEUsernameelpImg);
     $E('WebExPasswordHelp').set(WEPasswordHelpImg);
     $E('passwordHelp').set(passwordHelpImg);
+/*    $E('showAccessPasswordHelp').set(showAccessPasswordHelp);*/
+    $E('showAccessPasswordHelp').dom.onmouseover = showAccessPasswordHelp;
+    $E('seeParticipantsHelp').dom.onmouseover = seeParticipantsHelp;
+    $E('enableChatHelp').dom.onmouseover = enableChatHelp;
+    $E('joinBeforeHostHelp').dom.onmouseover = joinBeforeHostHelp;
+    $E('joinBeforeTimeHelp').dom.onmouseover = joinBeforeTimeHelp;
 }
 
 /**

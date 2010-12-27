@@ -38,14 +38,15 @@ from MaKaC.i18n import _
 from MaKaC.common.Counter import Counter
 from MaKaC.common.mail import GenericMailer
 from MaKaC.plugins.Collaboration.WebEx.mail import NewWebExMeetingNotificationAdmin, \
-    WebExMeetingModifiedNotificationAdmin, WebExMeetingRemovalNotificationAdmin
+    WebExMeetingModifiedNotificationAdmin, WebExMeetingRemovalNotificationAdmin, \
+  WebExParticipantNotification
 
 from MaKaC.plugins.Collaboration.WebEx.fossils import ICSBookingIndexingFossil, ICSBookingConfModifFossil
 from MaKaC.common.fossilize import fossilizes, fossilize
 from MaKaC.common.externalOperationsManager import ExternalOperationsManager
 
-from MaKaC.plugins.Collaboration.WebEx.mail import WebExParticipantNotification
 from MaKaC.common.mail import GenericMailer
+from MaKaC.plugins.Collaboration.collaborationTools import MailTools
 
 from cgi import escape
 
@@ -78,8 +79,15 @@ class CSBooking(CSBookingBase):
             "meetingDescription": (str, None),
             "webExUser":(str, None),
             "sendAttendeesEmail":(bool, True),
-            "sendCreatorEmail":(bool, True),
-            "session": (str,"")
+            "sendCreatorEmail":(bool, False),
+            "sendSelfEmail":(bool, False),
+            "loggedInEmail":(str, ''),
+            "showAccessPassword":(bool,False),
+            "session": (str,""), 
+            "seeParticipants": (bool, True),
+            "enableChat": (bool, True),
+            "joinBeforeHost": (bool,True),
+            "joinBeforeTime":(str,"900"),
     }
     _complexParameters = ["accessPassword", "hasAccessPassword", "participants", "webExPass" ]
 
@@ -104,6 +112,7 @@ class CSBooking(CSBookingBase):
         self._lastCheck = nowutc()
         self._checksDone = []
         self._bookingChangesHistory = []
+        self._latestChanges = []
 
     def getParticipantList(self, sorted = False):
         if sorted:
@@ -168,8 +177,32 @@ class CSBooking(CSBookingBase):
     def getPhoneNumToll(self):
         return self._phoneNumToll
 
+    def getJoinBeforeHost(self):
+        params = self.getBookingParams()
+        if not params.has_key('joinBeforeHost'): # or params['joinBeforeHost'] != "yes":
+            return "false"
+        return "true"
+
+    def getEnableChat(self):
+        params = self.getBookingParams()
+        if not params.has_key('enableChat'): # 'or params['enableChat'] != "yes":
+            return "false"
+        return "true"
+
+    def getSeeParticipants(self):
+        params = self.getBookingParams()
+        if not params.has_key('seeParticipants'): # or params['seeParticipants'] != "yes":
+            return "false"
+        return "true"
+
     def getPhoneAccessCode(self):
         return re.sub(r'(\d{3})(?=\d)',r'\1 ', str(self._webExKey)[::-1])[::-1]
+
+    def showAccessPassword(self):
+        params = self.getBookingParams()
+        if not params.has_key('showAccessPassword'):
+            return False;
+        return params["showAccessPassword"]
 
     def getStartURL(self):
         return self._startURL
@@ -195,6 +228,9 @@ class CSBooking(CSBookingBase):
     def getChangesFromWebEx(self):
         return self._bookingChangesHistory
 
+    def getLatestChanges(self):
+        return self._latestChanges
+
     def getLastCheck(self):
         return self._lastCheck
 
@@ -213,8 +249,8 @@ class CSBooking(CSBookingBase):
         if len(params["meetingTitle"].strip()) == 0:
             return WebExError(errorType = None, userMessage = _("Title cannot be left blank"))
 
-        if len(params["meetingDescription"].strip()) == 0:
-            return WebExError(errorType = None, userMessage = _("Description cannot be left blank."))
+#        if len(params["meetingDescription"].strip()) == 0:
+#            return WebExError(errorType = None, userMessage = _("Description cannot be left blank."))
 
         if len(params["webExUser"].strip()) == 0:
             return WebExError(errorType = None, userMessage = _("WebEx username is empty.  The booking cannot continue without this."))
@@ -306,7 +342,7 @@ class CSBooking(CSBookingBase):
         """
         params = self.getBookingParams()
         self.setAccessPassword( params['accessPassword'] )
-        self._duration = findDuration( self.getAdjustedStartDate('UTC'), self.getAdjustedEndDate('UTC') )
+        self._duration = findDuration( self.getStartDate(), self.getEndDate() )
         try:
             result = ExternalOperationsManager.execute(self, "createBooking", WebExOperations.createBooking, self)
         except Exception,e:
@@ -339,32 +375,42 @@ class CSBooking(CSBookingBase):
             "endDate" : _("End date"),
             "hidden" : _("Is hidden"),
             "sendAttendeesEmail" : _("Send emails to participants"),
-            "sendCreatorEmail" : _("Send emails to creator"),
+            "sendCreatorEmail" : _("Send emails to event managers"),
+            "sendSelfEmail":_("Send user booking WebEx an email copy"),
+            "showAccessPassword" : _("Show meeting password on event page"),
+            "seeParticipants" : _("See participants"),
+            "enableChat" : _("Participant chat"),
+            "joinBeforeHost" : _("Participants can join before host"),
+            "joinBeforeTime": _("Time an attendee can join a meeting before the official start time"),
             "notifyOnDateChanges" : _("Keep booking synchronized"),
             "accessPassword" : _("Meeting password"),
             "session" : _("Session")
         }
+        self._latestChanges = []
         self._warning = None
         if self._created:
-            self._bookingChangesHistory
             params = self.getBookingParams()
             # Create entries for the keys that aren't always present
-            hidden_keys = ["hidden", "notifyOnDateChanges", "sendAttendeesEmail", "sendCreatorEmail"]
+            hidden_keys = ["hidden", "notifyOnDateChanges", "sendAttendeesEmail", "sendCreatorEmail", "sendSelfEmail", "showAccessPassword", "seeParticipants", "enableChat", "joinBeforeHost", "joinBeforeTime"]
             for key in hidden_keys:
                 if not params.has_key( key ):
                     params[key] = "no"
                 if not oldBookingParams.has_key( key ):
                     oldBookingParams[key] = "no"
             for key in params.keys():
+                    if key == "loggedInEmail":
+                        continue
                     if key in hidden_keys:
                         if oldBookingParams.has_key( key ) != params.has_key( key ) or oldBookingParams[key] != params[key]:
                             self._bookingChangesHistory.append( "%s has changed." % ( verboseKeyNames[key] ) )
+                            self._latestChanges.append( "%s has changed." % ( verboseKeyNames[key] ) )
                             continue
                     if oldBookingParams[key] != params[key]:
                         if key == "participants":
                             #Number of participants changed - report this
                             if len(params[key]) != len(oldBookingParams[key]):
                                 self._bookingChangesHistory.append( "%s has changed." % ( verboseKeyNames[key] ) )
+                                self._latestChanges.append( "%s has changed." % ( verboseKeyNames[key] ) )
                                 continue
                             count = -1
                             for participant in params[key]:
@@ -374,9 +420,11 @@ class CSBooking(CSBookingBase):
                                         continue
                                     if oldBookingParams[key][count].get(participantKey) != params[key][count].get(participantKey):
                                         self._bookingChangesHistory.append( "%s has changed." % ( verboseKeyNames[key] ) )
+                                        self._latestChanges.append( "%s has changed." % ( verboseKeyNames[key] ) )
                                         break
                         else:
                             self._bookingChangesHistory.append( _("""%s _("has changed"): %s""") % ( verboseKeyNames[key], params[key] ) )
+                            self._latestChanges.append( "%s has changed." % ( verboseKeyNames[key] ) )
             try:
                 result = ExternalOperationsManager.execute(self, "modifyBooking", WebExOperations.modifyBooking, self)
                 if isinstance(result, WebExError):
@@ -567,6 +615,8 @@ class CSBooking(CSBookingBase):
         dom = xml.dom.minidom.parseString( response_xml )
         oldArguments = self.getCreateModifyArguments()
         changesFromWebEx = self._bookingChangesHistory
+        latestChanges = []
+
 
         start_date = makeTime( self.getAdjustedStartDate('UTC') ).strftime( "%m/%d/%Y %H:%M:%S" )
         time_discrepancy = False
@@ -586,6 +636,7 @@ class CSBooking(CSBookingBase):
             try:
                 if unescape(dom.getElementsByTagName( key )[0].firstChild.toxml('utf-8')) != unescape(str(oldArguments[key])) and key in verboseKeyNames:
                     changesFromWebEx.append(verboseKeyNames[key] + ": " + dom.getElementsByTagName( key )[0].firstChild.toxml('utf-8'))
+                    latestChanges.append(verboseKeyNames[key] + ": " + dom.getElementsByTagName( key )[0].firstChild.toxml('utf-8'))
                     if key == "meet:confName":
                         self._bookingParams["meetingTitle"] = unescape(dom.getElementsByTagName( key )[0].firstChild.toxml('utf-8'))
                     elif key == "meet:agenda":
@@ -611,11 +662,14 @@ class CSBooking(CSBookingBase):
                 if self._startDate != getAdjustedDate(WE_time, tz=self._conf.getTimezone()):
                     self._startDate = getAdjustedDate(WE_time, tz=self._conf.getTimezone())
                     changesFromWebEx.append(_("Updated start time to match WebEx entry"))
+                    latestChanges.append(_("Updated start time to match WebEx entry"))
                 if self._endDate != getAdjustedDate(WE_time, tz=self._conf.getTimezone()) + timedelta( minutes=int( self._duration ) ):
                     self._endDate = getAdjustedDate(WE_time, tz=self._conf.getTimezone()) + timedelta( minutes=int( self._duration ) )
                     changesFromWebEx.append(_("Updated end time to match WebEx entry"))
+                    latestchanges.append(_("Updated start time to match WebEx entry"))
         self.checkCanStart()
         self._bookingChangesHistory = changesFromWebEx
+        self._latestChanges = latestChanges
 
     def sendParticipantsEmail(self, operation):
         params = self.getBookingParams()
@@ -625,23 +679,31 @@ class CSBooking(CSBookingBase):
                 for k in self._participants.keys():
                     recipients.append( self._participants[k]._email )
                 if len(recipients)>0:
-                    notification = WebExParticipantNotification( self,recipients, operation )
-                    GenericMailer.send( notification )
+                    if operation == 'remove':
+                        notification = WebExParticipantNotification( self,recipients, operation )
+                        GenericMailer.send( notification )
+                    else:
+                        notification = WebExParticipantNotification( self,recipients, operation, additionalText="This is a WebEx meeting invitation.<br/><br/>" )
+                        GenericMailer.send( notification )
             if params.has_key('sendCreatorEmail') and params['sendCreatorEmail'][0].lower() == 'yes':
-                recipients = [self._booking.getOwnerObject().getEmail()]
-                notification = WebExParticipantNotification( self,recipients, operation )
+                recipients = MailTools.getManagersEmailList(self.getConference(), 'WebEx')
+                notification = WebExParticipantNotification( self,recipients, operation, additionalText="Dear event manager:<br/><br/>\n\n  " )
+                GenericMailer.send( notification )
+            if params.has_key('sendSelfEmail') and params['sendSelfEmail'][0].lower() == 'yes' and params.has_key("loggedInEmail") and params["loggedInEmail"] != "":
+                recipients = [ params["loggedInEmail"] ]
+                notification = WebExParticipantNotification( self,recipients, operation, additionalText="You are receiving this email because you requested it when creating a WebEx booking via Indico.<br/><br/>\n\n  " )
                 GenericMailer.send( notification )
         except Exception,e:
             Logger.get('WebEx').error(
                 """Could not send participant email for booking with id %s of event with id %s, operation %s, exception: %s""" %
                 (self.getId(), self.getConference().getId(), operation, str(e)))
+            Logger.get('WebEx').error( MailTools.getManagersEmailList(self.getConference(), 'WebEx') )
             self._warning = _("The operation appears to have been successful, however there was an error in sending the emails to participants: %s" % str(e) )
 
     def _sendMail(self, operation):
         """
         Overloading the _sendMail behavior for WebEx
         """
-        return WebExError(errorType = None, userMessage = _("Error in sending the emails."))
         if operation == 'new':
             try:
                 notification = NewWebExMeetingNotificationAdmin(self)

@@ -12,7 +12,7 @@
     checkParams: function() {
         return {
             'meetingTitle' : ['text', false],
-            'meetingDescription' : ['text', false],
+/*            'meetingDescription' : ['text', false],*/
             'webExPass' : ['text', false],
             'webExUser' : ['text', false],
             'startDate' : ['datetime', false, function(startDateString, values){
@@ -20,9 +20,9 @@
                 var startDate = IndicoUtil.parseDateTime(startDateString);
 
                 //check start date is not in the past
-                if (beforeNow(startDate)) {
+/*                if (beforeNow(startDate)) {
                     errors.push($T("Start date cannot be before the current time"));
-                }
+                }*/
                 var startDatePlusExtraTime = new Date();
                 startDatePlusExtraTime.setTime(startDate.getTime() + <%= AllowedStartMinutes %> *60*1000);
                 if (beforeNow(startDatePlusExtraTime)) {
@@ -224,6 +224,7 @@
     },
 
     getDateFields : function() {
+        document.getElementById('loggedInEmail').value = "<%= LoggedInEmail %>";
         return ["startDate", "endDate"]
     },
 

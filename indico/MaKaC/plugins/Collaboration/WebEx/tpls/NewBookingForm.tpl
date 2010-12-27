@@ -81,25 +81,20 @@
     </tr>
     <tr>
         <td class="bookingFormFieldName" style="vertical-align: top;padding-top: 10px;">
-            <span>Attendees</span>
+            <span>Invite Attendees</span>
         </td>
         <td style="padding-top: 10px;" id="participantsCell">
         </td>
     </tr>
     <tr>
         <td class="bookingFormFieldName">
-            <span>Send email to attendees?</span>
+            <span>Email options</span>
         </td>
         <td>
-            <input id="sendAttendeesEmail" type="checkbox" size="16" name="sendAttendeesEmail" value="yes" checked />
-        </td>
-    </tr>
-    <tr>
-        <td class="bookingFormFieldName">
-            <span>Send email to event creator?</span>
-        </td>
-        <td>
-            <input id="sendCreatorEmail" type="checkbox" size="16" name="sendCreatorEmail" value="yes" checked />
+<!--            Send email to attendees? <input id="sendAttendeesEmail" type="checkbox" name="sendAttendeesEmail" value="yes" />-->
+<!--            Send email to event managers? <input id="sendCreatorEmail" type="checkbox" name="sendCreatorEmail" value="yes" />-->
+           <input id="sendAttendeesEmail" type="hidden" name="sendAttendeesEmail" value="yes" />
+           <input id="sendSelfEmail" type="checkbox" name="sendSelfEmail" value="yes" /><input id="loggedInEmail" type="hidden" name="loggedInEmail" value="" /> Send a copy of the invitation email to your Indico email account? 
         </td>
     </tr>
 

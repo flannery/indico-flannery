@@ -23,7 +23,7 @@ from MaKaC.plugins.Collaboration.collaborationTools import MailTools
 
 from MaKaC.common.info import HelperMaKaCInfo
 from MaKaC.common.utils import formatDateTime
-from MaKaC.plugins.Collaboration.WebEx.common import getWebExOptionValueByName
+from MaKaC.plugins.Collaboration.WebEx.common import getWebExOptionValueByName, makeTime
 import re
 
 class WebExNotificationBase(GenericNotification):
@@ -57,15 +57,7 @@ Request details:<br />
     </tr>
     <tr>
         <td style="vertical-align: top; white-space : nowrap;">
-            <strong>Auto-join URL:</strong>
-        </td>
-        <td style="vertical-align: top">
-            <a href="%(url)s" target="_blank">%(url)s</a>
-        </td>
-    </tr>
-    <tr>
-        <td style="vertical-align: top; white-space : nowrap;">
-            <strong>Meeting description:</strong>
+            <strong>Agenda:</strong>
         </td>
         <td style="vertical-align: top;">
             %(description)s
@@ -81,14 +73,6 @@ Request details:<br />
     </tr>
     <tr>
         <td style="vertical-align: top; white-space : nowrap;">
-            <strong>End date:</strong>
-        </td>
-        <td style="vertical-align: top">
-            %(end_date)s &nbsp;&nbsp;&nbsp;%(timezone)s
-        </td>
-    </tr>
-    <tr>
-        <td style="vertical-align: top; white-space : nowrap;">
             <strong>Access password:</strong>
         </td>
         <td style="vertical-align: top">
@@ -96,13 +80,21 @@ Request details:<br />
         </td>
     </tr>
     <tr>
+        <td style="vertical-align: top; white-space : nowrap;">
+            <strong>Auto-join URL:</strong>
+        </td>
+        <td style="vertical-align: top">
+            <a href="%(url)s" target="_blank">%(url)s</a>
+        </td>
+    </tr>
+    <tr>
         <td style="vertical-align: top; white-space : nowrap;" colspan="2">
-            <strong>To receive a call back, provide your phone number when you join the meeting, or call the number below and enter the access code. </strong>
+            To receive a call back, provide your phone number when you join the meeting,<br/>or call the number below and enter the access code.
         </td>
     </tr>
     <tr>
         <td style="vertical-align: top; white-space : nowrap;">
-            <strong>Toll-free Call-in phone number:</strong>
+            <strong>Call-in toll-free phone number:</strong>
         </td>
         <td style="vertical-align: top">
             %(phone)s
@@ -110,7 +102,7 @@ Request details:<br />
     </tr>
     <tr>
         <td style="vertical-align: top; white-space : nowrap;">
-            <strong>Global Call-in phone number:</strong>
+            <strong>Call-in toll number:</strong>
         </td>
         <td style="vertical-align: top">
             %(phoneToll)s
@@ -118,7 +110,7 @@ Request details:<br />
     </tr>
     <tr>
         <td style="vertical-align: top; white-space : nowrap;">
-            <strong>Phone access code:</strong>
+            <strong>Access code:</strong>
         </td>
         <td style="vertical-align: top">
             %(phoneAccessCode)s
@@ -127,8 +119,8 @@ Request details:<br />
 </table>
 """%({ "title":bp["meetingTitle"],
      "description":bp["meetingDescription"],
-     "start_date":formatDateTime(self._booking.getAdjustedStartDate()),
-     "end_date":formatDateTime(self._booking.getAdjustedEndDate()),
+     "start_date":formatDateTime(self._booking.getAdjustedStartDate(), format="%A, %d %B %Y. %I:%M %p"),
+     "end_date":formatDateTime(self._booking.getAdjustedEndDate(), format="%A, %d %B %Y. %I:%M %p"),
      "password":self._booking.getAccessPassword(),
      "url":self._booking.getUrl(),
      "phone":self._booking.getPhoneNum(), 
@@ -143,27 +135,27 @@ Request details:<br />
         return "<br />".join([("•" + item) for item in list])
 
 class WebExParticipantNotification(WebExNotificationBase):
-    def __init__(self, booking, emailList, typeOfMail, changes=None):
+    def __init__(self, booking, emailList, typeOfMail, additionalText=""):
         WebExNotificationBase.__init__(self, booking)
         self.setToList(emailList)
         body_text = ""
+#        changes=None
         if typeOfMail == 'modify':
-            self.setSubject("""[Indico] Modification to WebEx meeting: %s (event id: %s)"""
-                        % (self._conference.getTitle(), str(self._conference.getId())))
-            body_text = "There has been a change to the WebEx meeting %s (event id: %s).  The new information is as follows. " % (self._conference.getTitle(), str(self._conference.getId()))
-            if len( booking._bookingChangesHistory ) > 0:
-                for change in booking._bookingChangesHistory:
-                    body_text += change + "<br/>"
+            self.setSubject("""[Indico] Modification to WebEx meeting: %s""" % self._conference.getTitle())
+            body_text = _("%s There has been a change to the WebEx meeting.  The new information is as follows. " % additionalText)
+#            if len( booking.getLatestChanges() ) > 0:
+#                body_text += "<ul>\n"
+#                for change in booking.getLatestChanges():
+#                    body_text += "<li>" + change + "</li>\n"
+#                body_text += "</ul>\n"
         elif typeOfMail == 'new':
-            self.setSubject("""[Indico] New WebEx meeting: %s (event id: %s)"""
-                        % (self._conference.getTitle(), str(self._conference.getId())))
-            body_text = "A new WebEx meeting %s (event id: %s) has been created.  The new information is as follows. " % (self._conference.getTitle(), str(self._conference.getId()))
+            self.setSubject("""[Indico] New WebEx meeting: %s""" % self._conference.getTitle())
+            body_text = _("%s A new WebEx meeting has been created.  The information is as follows." % additionalText)
         elif typeOfMail == 'delete':
-            self.setSubject("""[Indico] WebEx meeting deleted: %s (event id: %s)"""
-                        % (self._conference.getTitle(), str(self._conference.getId())))
-            body_text = "A WebEx meeting %s (event id: %s) has been deleted.  The information is as follows. " % (self._conference.getTitle(), str(self._conference.getId()))
-        if changes != None:
-            body_text += "Changes to modification: <br/>" + self.listToStr( changes )
+            self.setSubject("""[Indico] WebEx meeting deleted: %s""" % self._conference.getTitle())
+            body_text = _("%s A WebEx meeting has been deleted.  The information is as follows." % additionalText)
+#        if change != None:
+#            body_text += _("Changes to the booking: <br/>") + self.listToStr( changes )
         body_text += self._getBookingDetails()
         self.setBody( body_text )
         return None
@@ -178,7 +170,6 @@ class WebExEventManagerNotificationBase(WebExNotificationBase):
     def __init__(self, booking):
         WebExNotificationBase.__init__(self, booking)
         self.setToList(MailTools.getManagersEmailList(self._conference, 'WebEx'))
-
 
 class NewWebExMeetingNotificationAdmin(WebExAdminNotificationBase):
     """ Template to build an email notification to the responsible
@@ -249,10 +240,12 @@ class WebExMeetingModifiedNotificationAdmin(WebExAdminNotificationBase):
                         % (self._conference.getTitle(), str(self._conference.getId())))
 
 
-        body_text = "Dear WebEx Responsible,<br /> There has been a change on %s to the WebEx meeting %s (event id: %s).  The changed information is as follows. <br/><br/>	 " % (MailTools.getServerName(), self._conference.getTitle(), str(self._conference.getId()))
-        if len( booking._bookingChangesHistory ) > 0:
-            for change in booking._bookingChangesHistory:
-                body_text += change + "<br/>"
+        body_text = "Dear WebEx Responsible,<br /> There has been a change on %s to the WebEx meeting %s. <br/><br/>	 " % (MailTools.getServerName(), self._conference.getTitle() )
+#        if len( booking.getLatestChanges() ) > 0:
+#            body_text += "<ul>\n"
+#            for change in booking.getLatestChanges():
+#                body_text += "<li>" + change + "</li>\n"
+#            body_text += "</ul>\n"
         the_body2 = """
 <br />
 See the event page here: %s <br/>
